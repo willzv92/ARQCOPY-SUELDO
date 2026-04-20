@@ -6,12 +6,14 @@
 'use strict';
 
 /* ---- CONSTANTES LEGALES ---- */
-const SUELDO_BASE       = 1130;      // Sueldo mínimo vigente (S/)
-const HORAS_DIARIAS     = 8;         // Jornada laboral estándar
-const TASA_EXTRA_25     = 0.25;      // Primeras 2 h.e.
-const TASA_EXTRA_35     = 0.35;      // A partir de la 3.ª h.e.
-const TASA_AFP          = 0.1137;    // Descuento AFP (11.37%)
-const TASA_ONP          = 0.13;      // Descuento ONP (13%)
+const SUELDO_BASE       = 1130;            // Sueldo mínimo vigente (S/)
+const DIAS_MES_BASE     = 30;              // Base legal peruana: 30 días/mes
+const HORAS_DIARIAS     = 8;              // Jornada laboral estándar
+const VALOR_HORA        = SUELDO_BASE / DIAS_MES_BASE / HORAS_DIARIAS; // S/4.708...
+const TASA_EXTRA_25     = 0.25;           // Primeras 2 h.e.
+const TASA_EXTRA_35     = 0.35;           // A partir de la 3.ª h.e.
+const TASA_AFP          = 0.1137;         // Descuento AFP (11.37%) — solo sobre sueldo base
+const TASA_ONP          = 0.13;           // Descuento ONP (13%) — solo sobre sueldo base
 
 const MESES = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -139,7 +141,7 @@ function generarDias() {
       <td>
         <input type="time" id="entrada_${d}"
                value="${esFinde ? '' : '08:00'}"
-               oninput="calcularFila(${d})" />
+               oninput="onEntradaChange(${d})" />
       </td>
       <td>
         <input type="time" id="salida_${d}"
@@ -240,40 +242,38 @@ function obtenerTotalesAsistencia() {
    CÁLCULO DE SUELDO
    ============================================================ */
 function calcularSueldo(diasTrabajados, totalExtras) {
-  const mes         = parseInt(document.getElementById('mes').value);
-  const anio        = parseInt(document.getElementById('anio').value);
-  const diasHabiles = getDiasHabiles(mes, anio);
-  const tipoSeguro  = document.getElementById('seguro').value;
+  const tipoSeguro = document.getElementById('seguro').value;
 
-  // Sueldo proporcional a días trabajados
-  const sueldoProporcional = diasHabiles > 0
-    ? (SUELDO_BASE / diasHabiles) * diasTrabajados
-    : 0;
+  // Sueldo proporcional: base legal 30 días/mes
+  // S/ 1130 / 30 días = valor día; × días trabajados
+  const valorDia           = SUELDO_BASE / DIAS_MES_BASE;
+  const sueldoProporcional = valorDia * diasTrabajados;
 
-  // Valor de la hora normal
-  const valorHora = SUELDO_BASE / (diasHabiles * HORAS_DIARIAS || 1);
+  // Valor hora: S/ 1130 / 30 / 8
+  const valorHora = VALOR_HORA; // constante global
 
   // Horas extras: primeras 2 al 25%, el resto al 35%
-  const extras_25 = Math.min(totalExtras, 2);
-  const extras_35 = Math.max(0, totalExtras - 2);
+  // Las horas extras NO están afectas al descuento de seguro social
+  const extras_25  = Math.min(totalExtras, 2);
+  const extras_35  = Math.max(0, totalExtras - 2);
   const pagoExtras =
     extras_25 * valorHora * (1 + TASA_EXTRA_25) +
     extras_35 * valorHora * (1 + TASA_EXTRA_35);
 
   const bruto = sueldoProporcional + pagoExtras;
 
-  // Descuento seguro social
+  // Descuento seguro social: SOLO sobre sueldo proporcional (base), NO sobre extras
   let descuentoSeguro = 0;
   let labelSeguro     = 'No Inscrito';
   let tasaSeguro      = 0;
 
   if (tipoSeguro === 'afp') {
     tasaSeguro      = TASA_AFP;
-    descuentoSeguro = bruto * tasaSeguro;
+    descuentoSeguro = sueldoProporcional * tasaSeguro;
     labelSeguro     = `AFP (${(tasaSeguro * 100).toFixed(2)}%)`;
   } else if (tipoSeguro === 'onp') {
     tasaSeguro      = TASA_ONP;
-    descuentoSeguro = bruto * tasaSeguro;
+    descuentoSeguro = sueldoProporcional * tasaSeguro;
     labelSeguro     = `ONP (${(tasaSeguro * 100).toFixed(2)}%)`;
   }
 
@@ -284,7 +284,7 @@ function calcularSueldo(diasTrabajados, totalExtras) {
   const neto = bruto - descuentoSeguro - totalDescAdicional;
 
   return {
-    diasHabiles,
+    valorDia,
     sueldoProporcional,
     valorHora,
     extras_25,
@@ -293,6 +293,7 @@ function calcularSueldo(diasTrabajados, totalExtras) {
     bruto,
     descuentoSeguro,
     labelSeguro,
+    tasaSeguro,
     descuentosAdicionales,
     totalDescAdicional,
     neto
@@ -315,8 +316,8 @@ function actualizarStats() {
       <span class="stat-value c-blue">${diasTrabajados}</span>
     </div>
     <div class="stat-card">
-      <span class="stat-label">Horas Totales</span>
-      <span class="stat-value c-blue">${totalHorasTrab.toFixed(1)}h</span>
+      <span class="stat-label">Valor Hora</span>
+      <span class="stat-value c-blue">${fmtSol(VALOR_HORA)}</span>
     </div>
     <div class="stat-card">
       <span class="stat-label">Horas Extras</span>
@@ -436,12 +437,11 @@ function calcularYMostrar() {
       </div>`;
   }
 
-  // Descuento seguro
   let seccionSeguro = '';
   if (s.descuentoSeguro > 0) {
     seccionSeguro = `
       <div class="boleta-row">
-        <span class="label">${s.labelSeguro}</span>
+        <span class="label">${s.labelSeguro} sobre sueldo base (no aplica a h. extras)</span>
         <span class="value desc">- ${fmtSol(s.descuentoSeguro)}</span>
       </div>`;
   }
@@ -477,9 +477,11 @@ function calcularYMostrar() {
         <p>
           Seguro: ${s.labelSeguro}
           &nbsp;|&nbsp;
-          Días hábiles del mes: ${s.diasHabiles}
+          Base legal: ${DIAS_MES_BASE} días/mes
           &nbsp;|&nbsp;
           Días trabajados: ${diasTrabajados}
+          &nbsp;|&nbsp;
+          Valor hora: ${fmtSol(VALOR_HORA)}
         </p>
       </div>
 
@@ -492,7 +494,7 @@ function calcularYMostrar() {
           <span class="value">${fmtSol(SUELDO_BASE)}</span>
         </div>
         <div class="boleta-row">
-          <span class="label">Sueldo Proporcional (${diasTrabajados}/${s.diasHabiles} días)</span>
+          <span class="label">Sueldo Proporcional (${diasTrabajados} días × ${fmtSol(s.valorDia)}/día)</span>
           <span class="value">${fmtSol(s.sueldoProporcional)}</span>
         </div>
         ${rowsExtras}
@@ -618,11 +620,49 @@ function limpiarTodo() {
 }
 
 /* ============================================================
-   TOGGLE FINES DE SEMANA
+   REPLICAR PRIMER DÍA A TODOS LOS DÍAS
    ============================================================ */
-function toggleFindes() {
-  const mostrar = document.getElementById('chkFinde').checked;
-  document.querySelectorAll('#tbodyDias tr[data-finde="true"]').forEach(row => {
-    row.style.display = mostrar ? '' : 'none';
+function replicarPrimerDia() {
+  const activo = document.getElementById('chkReplica').checked;
+  if (!activo) return;
+
+  // Tomar el primer día que tenga entrada definida
+  const filas = document.querySelectorAll('#tbodyDias tr');
+  let entradaRef = '', salidaRef = '', almuerzoRef = '60';
+
+  for (const fila of filas) {
+    const d = fila.dataset.dia;
+    if (!d) continue;
+    const v = document.getElementById(`entrada_${d}`)?.value;
+    if (v) {
+      entradaRef  = v;
+      salidaRef   = document.getElementById(`salida_${d}`)?.value || '';
+      almuerzoRef = document.getElementById(`almuerzo_${d}`)?.value || '60';
+      break;
+    }
+  }
+
+  if (!entradaRef) return;
+
+  // Aplicar a todos los días visibles que tengan inputs
+  filas.forEach(fila => {
+    const d = fila.dataset.dia;
+    if (!d) return;
+    const entEl = document.getElementById(`entrada_${d}`);
+    const salEl = document.getElementById(`salida_${d}`);
+    const almEl = document.getElementById(`almuerzo_${d}`);
+    if (!entEl) return;
+    entEl.value = entradaRef;
+    salEl.value = salidaRef;
+    almEl.value = almuerzoRef;
+    calcularFila(parseInt(d));
   });
+}
+
+/* Escuchar cambios en el primer campo de entrada para propagar */
+function onEntradaChange(dia) {
+  calcularFila(dia);
+  if (document.getElementById('chkReplica')?.checked) {
+    replicarPrimerDia();
+  }
 }

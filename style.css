@@ -917,19 +917,67 @@ input[type="time"]:focus,
 }
 
 /* ============================================================
-   PRINT
+   PRINT — Boleta optimizada A4
    ============================================================ */
 @media print {
-  body * { visibility: hidden; }
-  .boleta, .boleta * { visibility: visible; }
-  .boleta {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    border: none;
-    box-shadow: none;
-    border-radius: 0;
-    max-width: 100%;
+  @page {
+    size: A4 portrait;
+    margin: 14mm 16mm;
   }
+
+  /* Ocultar todo excepto la boleta */
+  body > *:not(#boletaPrintWrapper) { display: none !important; }
+
+  .site-header,
+  .site-footer,
+  .step-section:not(#stepResumen) { display: none !important; }
+
+  #stepResumen .step-header,
+  #stepResumen .stats-grid,
+  #stepResumen > .btn-orange,
+  #stepResumen > div:first-of-type { display: none !important; }
+
+  .container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .boleta {
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    border: 1.5px solid #1e2d4a !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    padding: 18mm 16mm !important;
+    font-size: 9pt !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .boleta-brand    { font-size: 16pt !important; }
+  .boleta-tipo     { font-size: 7pt !important; }
+  .boleta-header   { margin-bottom: 12px !important; padding-bottom: 10px !important; }
+  .boleta-empleado { padding: 10px 12px !important; margin-bottom: 14px !important; }
+  .boleta-empleado h3 { font-size: 11pt !important; }
+  .boleta-empleado p  { font-size: 7.5pt !important; }
+
+  .boleta-section-title { font-size: 6.5pt !important; margin-bottom: 6px !important; }
+  .boleta-row     { padding: 5px 0 !important; }
+  .boleta-row .label { font-size: 8.5pt !important; }
+  .boleta-row .value { font-size: 8.5pt !important; }
+  .boleta-subtotal { padding: 7px 0 3px !important; font-size: 9pt !important; }
+  .boleta-divider  { margin: 12px 0 !important; }
+
+  .boleta-total {
+    padding: 12px 16px !important;
+    border-radius: 6px !important;
+    margin-top: 12px !important;
+  }
+  .boleta-total .label { font-size: 8pt !important; }
+  .boleta-total .value { font-size: 14pt !important; }
+
   .boleta-actions { display: none !important; }
+
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
