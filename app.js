@@ -141,17 +141,17 @@ function generarDias() {
       <td>
         <input type="time" id="entrada_${d}"
                value="${esFinde ? '' : '08:00'}"
-               oninput="onEntradaChange(${d})" />
+               oninput="onCampoChange(${d})" />
       </td>
       <td>
         <input type="time" id="salida_${d}"
                value="${esFinde ? '' : '18:00'}"
-               oninput="calcularFila(${d})" />
+               oninput="onCampoChange(${d})" />
       </td>
       <td>
         <input type="number" class="table-number" id="almuerzo_${d}"
                value="${esFinde ? '0' : '60'}" min="0" max="240"
-               oninput="calcularFila(${d})" />
+               oninput="onCampoChange(${d})" />
       </td>
       <td id="horasTrab_${d}">
         <span class="hours-badge badge-absent">—</span>
@@ -620,34 +620,41 @@ function limpiarTodo() {
 }
 
 /* ============================================================
-   REPLICAR PRIMER DÍA A TODOS LOS DÍAS
+   REPLICAR HORARIO A TODOS LOS DÍAS
    ============================================================ */
-function replicarPrimerDia() {
+
+/**
+ * Propaga los valores de un día fuente a todos los demás días.
+ * Se llama cuando el usuario cambia cualquier campo de un día
+ * mientras el toggle está activo, O cuando activa el toggle.
+ * @param {number|null} diaFuente - día que disparó el cambio;
+ *   si es null se toma el primer día con entrada definida.
+ */
+function replicarHorario(diaFuente) {
   const activo = document.getElementById('chkReplica').checked;
   if (!activo) return;
 
-  // Tomar el primer día que tenga entrada definida
-  const filas = document.querySelectorAll('#tbodyDias tr');
-  let entradaRef = '', salidaRef = '', almuerzoRef = '60';
+  const filas = Array.from(document.querySelectorAll('#tbodyDias tr[data-dia]'));
 
-  for (const fila of filas) {
-    const d = fila.dataset.dia;
-    if (!d) continue;
-    const v = document.getElementById(`entrada_${d}`)?.value;
-    if (v) {
-      entradaRef  = v;
-      salidaRef   = document.getElementById(`salida_${d}`)?.value || '';
-      almuerzoRef = document.getElementById(`almuerzo_${d}`)?.value || '60';
-      break;
+  // Determinar día fuente
+  let dRef = diaFuente;
+  if (!dRef) {
+    for (const fila of filas) {
+      const d = parseInt(fila.dataset.dia);
+      if (document.getElementById(`entrada_${d}`)?.value) { dRef = d; break; }
     }
   }
+  if (!dRef) return; // no hay ningún día con datos aún
+
+  const entradaRef  = document.getElementById(`entrada_${dRef}`)?.value  || '';
+  const salidaRef   = document.getElementById(`salida_${dRef}`)?.value   || '';
+  const almuerzoRef = document.getElementById(`almuerzo_${dRef}`)?.value || '60';
 
   if (!entradaRef) return;
 
-  // Aplicar a todos los días visibles que tengan inputs
   filas.forEach(fila => {
-    const d = fila.dataset.dia;
-    if (!d) return;
+    const d = parseInt(fila.dataset.dia);
+    if (d === dRef) return; // el fuente ya está calculado
     const entEl = document.getElementById(`entrada_${d}`);
     const salEl = document.getElementById(`salida_${d}`);
     const almEl = document.getElementById(`almuerzo_${d}`);
@@ -655,14 +662,12 @@ function replicarPrimerDia() {
     entEl.value = entradaRef;
     salEl.value = salidaRef;
     almEl.value = almuerzoRef;
-    calcularFila(parseInt(d));
+    calcularFila(d);
   });
 }
 
-/* Escuchar cambios en el primer campo de entrada para propagar */
-function onEntradaChange(dia) {
+/* Se llama desde oninput de cualquier campo de la tabla */
+function onCampoChange(dia) {
   calcularFila(dia);
-  if (document.getElementById('chkReplica')?.checked) {
-    replicarPrimerDia();
-  }
+  replicarHorario(dia);
 }
