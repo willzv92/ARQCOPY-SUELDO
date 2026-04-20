@@ -175,6 +175,11 @@ function generarDias() {
 /* ============================================================
    CÁLCULO DE FILA INDIVIDUAL
    ============================================================ */
+function esDescanso(entrada, salida, almuerzo) {
+  // Día de descanso: entrada 00:00, salida 08:00, sin tiempo de almuerzo
+  return entrada === '00:00' && salida === '08:00' && almuerzo === 0;
+}
+
 function calcularFila(dia) {
   const entrada  = document.getElementById(`entrada_${dia}`)?.value;
   const salida   = document.getElementById(`salida_${dia}`)?.value;
@@ -186,7 +191,16 @@ function calcularFila(dia) {
 
   if (!entrada || !salida || entrada >= salida) {
     celTrab.innerHTML  = `<span class="hours-badge badge-absent">—</span>`;
-    celExtra.innerHTML = `<span class="hours-badge badge-extra" style="opacity:0.35;">0h</span>`;
+    celExtra.innerHTML = `<span class="hours-badge badge-absent">—</span>`;
+    actualizarStats();
+    return;
+  }
+
+  // Detectar día de descanso
+  if (esDescanso(entrada, salida, almuerzo)) {
+    const badge = `<span class="hours-badge badge-descanso">Descanso</span>`;
+    celTrab.innerHTML  = badge;
+    celExtra.innerHTML = badge;
     actualizarStats();
     return;
   }
@@ -224,6 +238,7 @@ function obtenerTotalesAsistencia() {
     const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
 
     if (!entrada || !salida || entrada >= salida) return;
+    if (esDescanso(entrada, salida, almuerzo)) return; // día de descanso no cuenta
 
     const [eh, em] = entrada.split(':').map(Number);
     const [sh, sm] = salida.split(':').map(Number);
@@ -525,13 +540,13 @@ function calcularYMostrar() {
       </div>
 
       <div class="boleta-actions">
-        <button class="btn btn-ghost btn-sm" onclick="window.print()">
+        <button class="btn btn-ghost btn-sm" onclick="imprimirBoleta()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="6 9 6 2 18 2 18 9"/>
             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
             <rect x="6" y="14" width="12" height="8"/>
           </svg>
-          Imprimir
+          Imprimir / Guardar PDF
         </button>
       </div>
     </div>
@@ -670,4 +685,126 @@ function replicarHorario(diaFuente) {
 function onCampoChange(dia) {
   calcularFila(dia);
   replicarHorario(dia);
+}
+
+/* ============================================================
+   IMPRIMIR / GUARDAR PDF — ventana limpia con solo la boleta
+   ============================================================ */
+function imprimirBoleta() {
+  const boletaEl = document.querySelector('#boletaContainer .boleta');
+  if (!boletaEl) return;
+
+  const contenidoBoleta = boletaEl.innerHTML;
+  const googleFonts = document.querySelector('link[href*="fonts.googleapis"]')?.href || '';
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Boleta de Pago — Arq-Copy</title>
+  ${googleFonts ? `<link href="${googleFonts}" rel="stylesheet"/>` : ''}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1e2d4a; --blue: #3a8bbf; --sky: #5ab4e0;
+      --orange: #f47c51; --bg: #f0f4f8; --card: #fff;
+      --border: #d0dce8; --border-light: #e8eef5;
+      --text: #1e2d4a; --muted: #6b82a0;
+      --success: #2ecc71; --danger: #e74c3c;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 14mm 16mm;
+    }
+
+    html, body {
+      width: 210mm;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 9.5pt;
+      color: var(--text);
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .boleta {
+      width: 100%;
+      border: 1.5px solid var(--navy);
+      border-radius: 10px;
+      padding: 14mm 13mm;
+    }
+
+    .boleta-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .boleta-brand { font-size: 15pt; font-weight: 700; color: var(--navy); letter-spacing: -0.03em; }
+    .boleta-brand span { color: var(--orange); }
+    .boleta-tipo { font-family: 'Space Mono', monospace; font-size: 6pt; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-top: 3px; }
+    .boleta-periodo-text { font-family: 'Space Mono', monospace; font-size: 7pt; color: var(--muted); text-align: right; line-height: 1.7; }
+
+    .boleta-empleado { background: var(--bg); border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; }
+    .boleta-empleado h3 { font-size: 10.5pt; font-weight: 700; color: var(--navy); margin-bottom: 3px; }
+    .boleta-empleado p { font-size: 7.5pt; color: var(--muted); line-height: 1.6; }
+
+    .boleta-section-title {
+      font-size: 6.5pt; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 8px; padding-bottom: 3px;
+    }
+    .boleta-section-title.ingreso  { color: var(--blue);  border-bottom: 1px solid #d0eaf7; }
+    .boleta-section-title.descuento { color: var(--danger); border-bottom: 1px solid #facccc; }
+
+    .boleta-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5.5px 0; border-bottom: 1px dashed var(--border-light); gap: 12px;
+    }
+    .boleta-row:last-child { border-bottom: none; }
+    .boleta-row .label { color: var(--muted); font-size: 8.5pt; }
+    .boleta-row .value { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--navy); font-size: 8.5pt; white-space: nowrap; }
+    .boleta-row .value.extra { color: var(--orange); }
+    .boleta-row .value.desc  { color: var(--danger); }
+
+    .boleta-subtotal {
+      display: flex; justify-content: space-between;
+      padding: 8px 0 3px; font-weight: 700; font-size: 9pt;
+      border-top: 1.5px solid var(--border); margin-top: 4px;
+    }
+    .boleta-subtotal .value { font-family: 'Space Mono', monospace; font-size: 9pt; }
+
+    .boleta-divider { border: none; border-top: 2px solid var(--border); margin: 14px 0; }
+
+    .boleta-total {
+      background: var(--navy);
+      border-radius: 8px; padding: 13px 18px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 14px;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .boleta-total .label { color: var(--sky); font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+    .boleta-total .value { font-family: 'Space Mono', monospace; font-size: 13pt; font-weight: 700; color: #fff; }
+
+    .boleta-actions { display: none !important; }
+
+    [style*="margin-bottom:20px"],
+    [style*="margin-bottom: 20px"] { margin-bottom: 14px !important; }
+  </style>
+</head>
+<body>
+  <div class="boleta">${contenidoBoleta}</div>
+  <script>window.onload = function(){ window.print(); };<\/script>
+</body>
+</html>`;
+
+  const ventana = window.open('', '_blank', 'width=900,height=700');
+  if (!ventana) { alert('Por favor permite las ventanas emergentes para poder imprimir.'); return; }
+  ventana.document.write(html);
+  ventana.document.close();
 }

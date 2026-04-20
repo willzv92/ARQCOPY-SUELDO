@@ -517,6 +517,14 @@ input[type="time"]:focus,
   border: 1px solid #fcc9b2;
 }
 
+.badge-descanso {
+  background: #eafaf1;
+  color: #1a9e58;
+  border: 1px solid #a3e4be;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+}
+
 .badge-absent {
   background: #f5f7fa;
   color: var(--muted-light);
