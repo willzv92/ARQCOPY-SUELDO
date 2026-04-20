@@ -221,10 +221,14 @@ function calcularFila(dia) {
 
 /* ============================================================
    OBTENER TOTALES DE LA TABLA
+   Las horas extras se cortan POR DÍA: primeras 2h → 25%, resto → 35%
    ============================================================ */
 function obtenerTotalesAsistencia() {
   const filas = document.querySelectorAll('#tbodyDias tr');
-  let diasTrabajados = 0, totalHorasTrab = 0, totalExtras = 0;
+  let diasTrabajados = 0, totalHorasTrab = 0;
+  let totalExtras = 0;      // total bruto (para mostrar en stats)
+  let totalExtras_25 = 0;   // horas a pagar al 25% (acumulado de todos los días)
+  let totalExtras_35 = 0;   // horas a pagar al 35% (acumulado de todos los días)
 
   filas.forEach(fila => {
     const d = fila.dataset.dia;
@@ -236,7 +240,7 @@ function obtenerTotalesAsistencia() {
 
     if (!entrada || !salida || entrada >= salida) return;
 
-    // Día de descanso: cuenta como día trabajado con 8h, pero sin horas extras
+    // Día de descanso: cuenta como día trabajado con 8h, sin extras
     if (esDescanso(entrada, salida, almuerzo)) {
       diasTrabajados++;
       totalHorasTrab += HORAS_DIARIAS;
@@ -245,35 +249,39 @@ function obtenerTotalesAsistencia() {
 
     const [eh, em] = entrada.split(':').map(Number);
     const [sh, sm] = salida.split(':').map(Number);
-    const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
-    const extras   = Math.max(0, horas - HORAS_DIARIAS);
+    const horas  = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
+    const extras = Math.max(0, horas - HORAS_DIARIAS);
+
+    // Corte diario: primeras 2h extras al 25%, el resto al 35%
+    const dia_25 = Math.min(extras, 2);
+    const dia_35 = Math.max(0, extras - 2);
 
     diasTrabajados++;
     totalHorasTrab += horas;
     totalExtras    += extras;
+    totalExtras_25 += dia_25;
+    totalExtras_35 += dia_35;
   });
 
-  return { diasTrabajados, totalHorasTrab, totalExtras };
+  return { diasTrabajados, totalHorasTrab, totalExtras, totalExtras_25, totalExtras_35 };
 }
 
 /* ============================================================
    CÁLCULO DE SUELDO
    ============================================================ */
-function calcularSueldo(diasTrabajados, totalExtras) {
+function calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras_35) {
   const tipoSeguro = document.getElementById('seguro').value;
 
   // Sueldo proporcional: base legal 30 días/mes
-  // S/ 1130 / 30 días = valor día; × días trabajados
   const valorDia           = SUELDO_BASE / DIAS_MES_BASE;
   const sueldoProporcional = valorDia * diasTrabajados;
 
   // Valor hora: S/ 1130 / 30 / 8
-  const valorHora = VALOR_HORA; // constante global
+  const valorHora = VALOR_HORA;
 
-  // Horas extras: primeras 2 al 25%, el resto al 35%
-  // Las horas extras NO están afectas al descuento de seguro social
-  const extras_25  = Math.min(totalExtras, 2);
-  const extras_35  = Math.max(0, totalExtras - 2);
+  // Horas extras ya separadas por día (primeras 2h/día al 25%, resto al 35%)
+  const extras_25  = totalExtras_25;
+  const extras_35  = totalExtras_35;
   const pagoExtras =
     extras_25 * valorHora * (1 + TASA_EXTRA_25) +
     extras_35 * valorHora * (1 + TASA_EXTRA_35);
@@ -325,8 +333,8 @@ function actualizarStats() {
   const statsGrid = document.getElementById('statsGrid');
   if (!statsGrid) return;
 
-  const { diasTrabajados, totalHorasTrab, totalExtras } = obtenerTotalesAsistencia();
-  const s = calcularSueldo(diasTrabajados, totalExtras);
+  const { diasTrabajados, totalHorasTrab, totalExtras, totalExtras_25, totalExtras_35 } = obtenerTotalesAsistencia();
+  const s = calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras_35);
 
   statsGrid.innerHTML = `
     <div class="stat-card">
@@ -427,8 +435,8 @@ function calcularYMostrar() {
   const mes    = parseInt(document.getElementById('mes').value);
   const anio   = parseInt(document.getElementById('anio').value);
 
-  const { diasTrabajados, totalHorasTrab, totalExtras } = obtenerTotalesAsistencia();
-  const s = calcularSueldo(diasTrabajados, totalExtras);
+  const { diasTrabajados, totalHorasTrab, totalExtras, totalExtras_25, totalExtras_35 } = obtenerTotalesAsistencia();
+  const s = calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras_35);
 
   const hoy = new Date().toLocaleDateString('es-PE', {
     day: '2-digit', month: 'long', year: 'numeric'
