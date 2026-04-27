@@ -925,3 +925,65 @@ input[type="time"]:focus,
 }
 
 /* Print handled via iframe in app.js — no page-level print styles needed */
+
+/* ============================================================
+   EXPORT / IMPORT TOOLBAR
+   ============================================================ */
+.save-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: #f8fbfd;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  flex-wrap: wrap;
+}
+
+.save-toolbar-left {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-save {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+}
+.btn-save:hover {
+  background: var(--navy-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30,45,74,0.28);
+}
+
+.btn-load {
+  background: transparent;
+  color: var(--blue);
+  border: 1.5px solid var(--blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.18s, transform 0.14s, box-shadow 0.18s;
+  white-space: nowrap;
+}
+.btn-load:hover {
+  background: rgba(58,139,191,0.07);
+  transform: translateY(-1px);
+}
+
+.save-status {
+  font-size: 0.78rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--success);
+  opacity: 0;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+}
+.save-status.visible { opacity: 1; }
