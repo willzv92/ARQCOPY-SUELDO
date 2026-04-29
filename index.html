@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arq-Copy — Planilla de Sueldos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="38" height="38" rx="10" fill="rgba(255,255,255,0.12)"/>
+            <rect x="8" y="17" width="22" height="5" rx="2.5" fill="#5ab4e0"/>
+            <polygon points="8,24 30,24 24,34 14,34" fill="#5ab4e0" opacity="0.75"/>
+            <text x="10" y="16" font-size="13" fill="#fff" font-weight="700" font-family="sans-serif">Arq</text>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-name">Arq-Copy</h1>
+          <span class="brand-sub">Sistema de Planilla</span>
+        </div>
+      </div>
+      <div class="header-badge">
+        <span class="badge-dot"></span>
+        <span>Sueldo Mínimo Vigente: S/ 1,130</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="container">
+
+    <!-- STEP 1: DATOS DEL EMPLEADO -->
+    <section class="step-section" id="stepEmpleado">
+      <div class="step-header">
+        <span class="step-number">01</span>
+        <div>
+          <h2 class="step-title">Datos del Empleado</h2>
+          <p class="step-desc">Complete la información personal y el período de planilla</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-group col-2">
+            <label for="nombreEmpleado">Nombres y Apellido</label>
+            <input type="text" id="nombreEmpleado" placeholder="Ej: Juan Carlos Flores Ríos" autocomplete="off" />
+          </div>
+
+          <div class="form-group">
+            <label for="mes">Mes</label>
+            <select id="mes">
+              <option value="0">Enero</option>
+              <option value="1">Febrero</option>
+              <option value="2">Marzo</option>
+              <option value="3">Abril</option>
+              <option value="4">Mayo</option>
+              <option value="5">Junio</option>
+              <option value="6">Julio</option>
+              <option value="7">Agosto</option>
+              <option value="8">Septiembre</option>
+              <option value="9">Octubre</option>
+              <option value="10">Noviembre</option>
+              <option value="11">Diciembre</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="anio">Año</label>
+            <select id="anio"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="seguro">Tipo de Seguro Social</label>
+            <select id="seguro" onchange="actualizarInfoSeguro()">
+              <option value="ninguno">No Inscrito</option>
+              <option value="afp">AFP</option>
+              <option value="onp">ONP</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="diaInicio">Día de inicio laboral</label>
+            <input type="number" id="diaInicio" min="1" max="31" value="1"
+                   placeholder="1–31" title="Si el empleado empezó después del día 1, los días anteriores no se cobran ni generan déficit." />
+          </div>
+
+        </div>
+
+        <!-- Día de activación (fuera del grid para no romper las 4 columnas) -->
+        <div class="form-group" id="grupoDiaActivacion" style="display:none; max-width:260px; margin-bottom:16px;">
+          <label for="diaActivacion">Día de activación del seguro</label>
+          <input type="number" id="diaActivacion" min="1" max="31" value="1"
+                 placeholder="1–31" oninput="actualizarInfoSeguro()" />
+        </div>
+
+        <!-- Info seguro -->
+        <div class="seguro-info" id="seguroInfo" style="display:none;">
+          <span class="seguro-icon">ℹ️</span>
+          <span id="seguroInfoText"></span>
+        </div>
+
+        <div class="actions-row">
+          <button class="btn btn-primary" onclick="generarDias()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Generar Días del Mes
+          </button>
+          <button class="btn btn-ghost" onclick="llenarEjemplo()" id="btnEjemplo" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Llenar Ejemplo
+          </button>
+          <button class="btn btn-ghost btn-danger" onclick="limpiarTodo()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: ASISTENCIA -->
+    <section class="step-section" id="stepAsistencia" style="display:none;">
+      <div class="step-header">
+        <span class="step-number">02</span>
+        <div>
+          <h2 class="step-title">Registro de Asistencia</h2>
+          <p class="step-desc" id="labelPeriodo">—</p>
+        </div>
+      </div>
+
+      <div class="card card-table">
+        <div class="table-toolbar">
+          <label class="toggle-label">
+            <input type="checkbox" id="chkReplica" onchange="replicarHorario(null)" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            Replicar horario del primer día a todos
+          </label>
+          <div class="leyenda">
+            <span class="ley-badge badge-normal">Horas normales</span>
+            <span class="ley-badge badge-extra">Horas extras</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="tablaDias">
+            <thead>
+              <tr>
+                <th class="th-dia">Día</th>
+                <th>Hora Entrada</th>
+                <th>Hora Salida</th>
+                <th>Almuerzo (min)</th>
+                <th>Horas Trab.</th>
+                <th>H. Extras</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyDias"></tbody>
+          </table>
+        </div>
+
+        <!-- FILA TOTALES -->
+        <div class="totales-bar" id="totalesBar" style="display:none;">
+          <span class="totales-bar-label">TOTAL DEL MES</span>
+          <span class="totales-bar-item">
+            Horas trabajadas: <span id="totalHorasTrab" class="totales-bar-val">—</span>
+          </span>
+          <span class="totales-bar-item">
+            Horas extras: <span id="totalHorasExtra" class="totales-bar-val totales-bar-extra">—</span>
+          </span>
+        </div>
+
+        <!-- EXPORTAR / IMPORTAR AVANCE -->
+        <div class="save-toolbar">
+          <div class="save-toolbar-left">
+            <button type="button" class="btn btn-save" onclick="exportarAvance()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar Avance
+            </button>
+            <label class="btn btn-load" style="cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Importar Avance
+              <input type="file" id="inputImportar" accept=".json" style="display:none;" onchange="importarAvance(event)" />
+            </label>
+          </div>
+          <span class="save-status" id="saveStatus"></span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- STEP 3: DESCUENTOS ADICIONALES -->
+    <section class="step-section" id="stepDescuentos" style="display:none;">
+      <div class="step-header">
+        <span class="step-number">03</span>
+        <div>
+          <h2 class="step-title">Descuentos Adicionales</h2>
+          <p class="step-desc">Adelantos de sueldo, consumo de productos u otros descuentos</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="listaDescuentos" class="descuentos-lista"></div>
+
+        <button class="btn btn-ghost btn-add" onclick="agregarDescuento()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Agregar Descuento
+        </button>
+
+        <div class="descuento-total-row" id="descuentoTotalRow" style="display:none;">
+          <span>Total Descuentos Adicionales:</span>
+          <span class="descuento-total-val" id="descuentoTotalVal">S/ 0.00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: RESUMEN + BOLETA -->
+    <section class="step-section" id="stepResumen" style="display:none;">
+      <div class="step-header">
+        <span class="step-number">04</span>
+        <div>
+          <h2 class="step-title">Resumen & Boleta de Pago</h2>
+          <p class="step-desc">Cálculo automático del período registrado</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid"></div>
+
+      <!-- CTA Calcular -->
+      <div style="margin-bottom:24px;">
+        <button class="btn btn-orange btn-lg" onclick="calcularYMostrar()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+          Generar Boleta de Pago
+        </button>
+      </div>
+
+      <!-- Boleta -->
+      <div id="boletaContainer"></div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <span>Arq-Copy &copy; 2026 — Sistema de Planilla | Ley Peruana Vigente</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
