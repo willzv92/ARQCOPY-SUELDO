@@ -354,12 +354,16 @@ function obtenerTotalesAsistencia() {
   const totalExtras_35 = extrasPool_35;
   const totalExtras    = totalExtras_25 + totalExtras_35;
 
-  // Horas de déficit que las extras NO pudieron cubrir (Regla 3)
-  const horasNoCubiertas = deficitRestante;
+  // Redondear a 4 decimales para evitar falsos déficits por punto flotante
+  // (ej: 0.000000001 no debe activar la Regla 3)
+  const horasNoCubiertas = Math.round(deficitRestante * 10000) / 10000;
 
-  // Horas efectivas = trabajadas + extras usadas para compensar
-  // (para mostrar en stats, no para el cálculo de sueldo)
-  const horasEfectivas = horasTrabajadas + (deficitBruto - horasNoCubiertas);
+  // Horas efectivas para el desglose de sueldo proporcional (Regla 3).
+  // Cuando no hay déficit residual se fija en horasRegla para no inflarlo
+  // con las extras brutas que ya están dentro de horasTrabajadas.
+  const horasEfectivas = horasNoCubiertas > 0
+    ? Math.min(horasTrabajadas, horasRegla) + (usado_35 + usado_25)
+    : horasRegla;
 
   return {
     diasRealesMes,
