@@ -442,6 +442,24 @@ tbody tr:hover { background: #f5f9fc; }
 
 tbody tr.weekend { background: #fafbfc; }
 tbody tr.weekend:hover { background: #f2f6fa; }
+
+/* Fila de totales al pie de la tabla */
+tfoot tr.totales-row {
+  background: var(--navy);
+  color: #fff;
+}
+tfoot tr.totales-row td {
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  border-top: 2px solid var(--blue);
+}
+tfoot tr.totales-row .totales-label {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: #a8c4d8;
+}
 tbody tr.finde-oculto { display: none; }
 
 tbody td {

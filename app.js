@@ -186,6 +186,21 @@ function generarDias() {
     calcularFila(d);
   }
 
+  // Fila de totales al pie de la tabla
+  const tabla = document.getElementById('tablaDias');
+  const tfootPrev = tabla.querySelector('tfoot');
+  if (tfootPrev) tfootPrev.remove();
+  const tfoot = document.createElement('tfoot');
+  tfoot.id = 'tfootTotales';
+  tfoot.innerHTML = `
+    <tr class="totales-row">
+      <td colspan="4" class="totales-label">TOTAL DEL MES</td>
+      <td id="totalHorasTrab"><span class="hours-badge badge-normal">—</span></td>
+      <td id="totalHorasExtra"><span class="hours-badge badge-extra" style="opacity:0.35;">—</span></td>
+    </tr>`;
+  tabla.appendChild(tfoot);
+
+  actualizarTotalesTabla();
   actualizarStats();
   document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
 }
@@ -235,6 +250,43 @@ function calcularFila(dia) {
     : `<span class="hours-badge badge-extra" style="opacity:0.35;">0h</span>`;
 
   actualizarStats();
+}
+
+/* ============================================================
+   TOTALES AL PIE DE LA TABLA
+   ============================================================ */
+function actualizarTotalesTabla() {
+  const celTot   = document.getElementById('totalHorasTrab');
+  const celExtra = document.getElementById('totalHorasExtra');
+  if (!celTot || !celExtra) return;
+
+  let sumTrab  = 0;
+  let sumExtra = 0;
+
+  document.querySelectorAll('#tbodyDias tr[data-dia]').forEach(fila => {
+    const d = fila.dataset.dia;
+    const entrada  = document.getElementById('entrada_'  + d)?.value;
+    const salida   = document.getElementById('salida_'   + d)?.value;
+    const almuerzo = parseInt(document.getElementById('almuerzo_' + d)?.value) || 0;
+
+    if (!entrada || !salida || entrada >= salida) return;
+
+    if (esDescanso(entrada, salida, almuerzo)) {
+      sumTrab += HORAS_DIARIAS;
+      return;
+    }
+
+    const [eh, em] = entrada.split(':').map(Number);
+    const [sh, sm] = salida.split(':').map(Number);
+    const horas = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
+    sumTrab  += horas;
+    sumExtra += Math.max(0, horas - HORAS_DIARIAS);
+  });
+
+  celTot.innerHTML   = `<span class="hours-badge badge-normal">${fmtHrs(sumTrab)}</span>`;
+  celExtra.innerHTML = sumExtra > 0
+    ? `<span class="hours-badge badge-extra">+${fmtHrs(sumExtra)}</span>`
+    : `<span class="hours-badge badge-extra" style="opacity:0.35;">0h</span>`;
 }
 
 /* ============================================================
@@ -419,6 +471,8 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
 function actualizarStats() {
   const statsGrid = document.getElementById('statsGrid');
   if (!statsGrid) return;
+
+  actualizarTotalesTabla();
 
   const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia();
   const s = calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas);
@@ -1153,7 +1207,10 @@ function exportarAvance() {
   const a    = document.createElement('a');
   a.href     = url;
   a.download = 'arqcopy_' + (nombre || 'avance').replace(/\s+/g, '_') + '_' + MESES[mes] + anio + '.json';
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
   mostrarStatus('✓ Exportado: ' + avance.nombre + ' — ' + MESES[mes] + ' ' + anio);
 }
