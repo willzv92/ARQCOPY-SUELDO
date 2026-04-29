@@ -87,12 +87,19 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="diaInicio">Día de inicio laboral</label>
-            <input type="number" id="diaInicio" min="1" max="31" value="1"
-                   placeholder="1–31" title="Si el empleado empezó después del día 1, los días anteriores no se cobran ni generan déficit." />
-          </div>
+        </div>
 
+        <!-- Día de inicio laboral (fuera del grid para no romper las 4 columnas) -->
+        <div class="form-group" id="grupoDiaInicio" style="max-width:260px; margin-bottom:16px;">
+          <label for="diaInicio">📅 ¿Desde qué día empezó a trabajar?</label>
+          <input type="number" id="diaInicio" min="1" max="31" value="1"
+                 placeholder="1–31 (default: 1)" oninput="actualizarInfoDiaInicio()" />
+        </div>
+
+        <!-- Aviso de días no laborados -->
+        <div class="seguro-info" id="diaInicioInfo" style="display:none;">
+          <span class="seguro-icon">📋</span>
+          <span id="diaInicioInfoText"></span>
         </div>
 
         <!-- Día de activación (fuera del grid para no romper las 4 columnas) -->

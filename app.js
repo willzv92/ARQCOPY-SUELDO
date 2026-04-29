@@ -41,6 +41,7 @@ const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
   // Info seguro inicial
   actualizarInfoSeguro();
+  actualizarInfoDiaInicio();
 })();
 
 /* ============================================================
@@ -117,8 +118,34 @@ function actualizarInfoSeguro() {
 }
 
 /* ============================================================
-   GENERACIÓN DE DÍAS DEL MES
+   INFO DE DÍA DE INICIO LABORAL
    ============================================================ */
+function actualizarInfoDiaInicio() {
+  const mes     = parseInt(document.getElementById('mes').value);
+  const anio    = parseInt(document.getElementById('anio').value);
+  const diaEl   = document.getElementById('diaInicio');
+  const banner  = document.getElementById('diaInicioInfo');
+  const texto   = document.getElementById('diaInicioInfoText');
+  if (!banner || !texto) return;
+
+  const dia  = Math.max(1, parseInt(diaEl?.value) || 1);
+  const total = getDiasEnMes(mes, anio);
+
+  if (dia <= 1) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  const diasNoPagados = dia - 1;
+  const diasLaborales = total - diasNoPagados;
+  const sueldoProporcional = SUELDO_BASE * (Math.max(0, DIAS_MES_BASE - diasNoPagados) / DIAS_MES_BASE);
+
+  banner.style.display = 'flex';
+  texto.textContent = `El empleado empieza el día ${dia}: los primeros ${diasNoPagados} día(s) no se pagan. `
+    + `Laborará ${diasLaborales} día(s) del mes. Sueldo base máximo del período: S/ ${sueldoProporcional.toFixed(2)}.`;
+}
+
+
 function generarDias() {
   const mes       = parseInt(document.getElementById('mes').value);
   const anio      = parseInt(document.getElementById('anio').value);
@@ -852,6 +879,7 @@ function limpiarTodo() {
   const diaIniReset = document.getElementById('diaInicio');
   if (diaIniReset) diaIniReset.value = 1;
   actualizarInfoSeguro();
+  actualizarInfoDiaInicio();
 
   document.getElementById('stepAsistencia').style.display  = 'none';
   document.getElementById('stepDescuentos').style.display  = 'none';
