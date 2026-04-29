@@ -352,11 +352,11 @@ function obtenerTotalesAsistencia() {
   let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
 
   filas.forEach(fila => {
-    const d = fila.dataset.dia;
+    const d = parseInt(fila.dataset.dia);
     if (!d) return;
 
     // Días previos al inicio laboral → no generan déficit ni horas
-    if (fila.dataset.noLaboro === 'true') return;
+    if (d < diaInicio) return;
 
     const entrada  = document.getElementById(`entrada_${d}`)?.value;
     const salida   = document.getElementById(`salida_${d}`)?.value;
@@ -818,16 +818,16 @@ function calcularYMostrar() {
    LLENAR EJEMPLO
    ============================================================ */
 function llenarEjemplo() {
-  const mes  = parseInt(document.getElementById('mes').value);
-  const anio = parseInt(document.getElementById('anio').value);
-  const total = getDiasEnMes(mes, anio);
+  const mes       = parseInt(document.getElementById('mes').value);
+  const anio      = parseInt(document.getElementById('anio').value);
+  const total     = getDiasEnMes(mes, anio);
+  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
 
   // Horarios variados para días laborales
   const salidaOpciones = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30'];
 
   for (let d = 1; d <= total; d++) {
-    const fila = document.querySelector(`#tbodyDias tr[data-dia="${d}"]`);
-    if (fila?.dataset.noLaboro === 'true') continue; // skip días no laborados
+    if (d < diaInicio) continue; // skip días no laborados
 
     const esFinde = esFinDeSemana(mes, anio, d);
 
@@ -911,8 +911,9 @@ function limpiarTodo() {
  *   si es null se toma el primer día con entrada definida.
  */
 function replicarHorario(diaFuente) {
-  const activo = document.getElementById('chkReplica').checked;
+  const activo    = document.getElementById('chkReplica').checked;
   if (!activo) return;
+  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
 
   const filas = Array.from(document.querySelectorAll('#tbodyDias tr[data-dia]'));
 
@@ -921,7 +922,7 @@ function replicarHorario(diaFuente) {
   if (!dRef) {
     for (const fila of filas) {
       const d = parseInt(fila.dataset.dia);
-      if (fila.dataset.noLaboro === 'true') continue;
+      if (d < diaInicio) continue;
       if (document.getElementById(`entrada_${d}`)?.value) { dRef = d; break; }
     }
   }
@@ -935,8 +936,8 @@ function replicarHorario(diaFuente) {
 
   filas.forEach(fila => {
     const d = parseInt(fila.dataset.dia);
-    if (fila.dataset.noLaboro === 'true') return; // skip días no laborados
-    if (d === dRef) return; // el fuente ya está calculado
+    if (d < diaInicio) return; // skip días no laborados
+    if (d === dRef) return;
     const entEl = document.getElementById(`entrada_${d}`);
     const salEl = document.getElementById(`salida_${d}`);
     const almEl = document.getElementById(`almuerzo_${d}`);
@@ -1265,7 +1266,7 @@ function exportarAvance() {
   const dias = [];
   filas.forEach(fila => {
     const d = parseInt(fila.dataset.dia);
-    if (fila.dataset.noLaboro === 'true') return; // skip días no laborados
+    if (d < diaInicio) return; // skip días no laborados
     dias.push({
       dia:      d,
       entrada:  document.getElementById('entrada_' + d)?.value  || '',
