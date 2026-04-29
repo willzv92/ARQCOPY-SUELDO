@@ -91,7 +91,7 @@ function actualizarInfoSeguro() {
 
   // Mostrar / ocultar campo de día de activación
   if (tipo !== 'ninguno') {
-    grupodia.style.display = 'block';
+    grupodia.style.display = 'flex';
   } else {
     grupodia.style.display = 'none';
     banner.style.display   = 'none';
