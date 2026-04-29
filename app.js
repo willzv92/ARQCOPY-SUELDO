@@ -186,20 +186,6 @@ function generarDias() {
     calcularFila(d);
   }
 
-  // Fila de totales al pie de la tabla
-  const tabla = document.getElementById('tablaDias');
-  const tfootPrev = tabla.querySelector('tfoot');
-  if (tfootPrev) tfootPrev.remove();
-  const tfoot = document.createElement('tfoot');
-  tfoot.id = 'tfootTotales';
-  tfoot.innerHTML = `
-    <tr class="totales-row">
-      <td colspan="4" class="totales-label">TOTAL DEL MES</td>
-      <td id="totalHorasTrab"><span class="hours-badge badge-normal">—</span></td>
-      <td id="totalHorasExtra"><span class="hours-badge badge-extra" style="opacity:0.35;">—</span></td>
-    </tr>`;
-  tabla.appendChild(tfoot);
-
   actualizarTotalesTabla();
   actualizarStats();
   document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
@@ -258,10 +244,12 @@ function calcularFila(dia) {
 function actualizarTotalesTabla() {
   const celTot   = document.getElementById('totalHorasTrab');
   const celExtra = document.getElementById('totalHorasExtra');
-  if (!celTot || !celExtra) return;
+  const bar      = document.getElementById('totalesBar');
+  if (!celTot || !celExtra || !bar) return;
 
   let sumTrab  = 0;
   let sumExtra = 0;
+  let hayDatos = false;
 
   document.querySelectorAll('#tbodyDias tr[data-dia]').forEach(fila => {
     const d = fila.dataset.dia;
@@ -270,6 +258,7 @@ function actualizarTotalesTabla() {
     const almuerzo = parseInt(document.getElementById('almuerzo_' + d)?.value) || 0;
 
     if (!entrada || !salida || entrada >= salida) return;
+    hayDatos = true;
 
     if (esDescanso(entrada, salida, almuerzo)) {
       sumTrab += HORAS_DIARIAS;
@@ -283,10 +272,11 @@ function actualizarTotalesTabla() {
     sumExtra += Math.max(0, horas - HORAS_DIARIAS);
   });
 
-  celTot.innerHTML   = `<span class="hours-badge badge-normal">${fmtHrs(sumTrab)}</span>`;
-  celExtra.innerHTML = sumExtra > 0
-    ? `<span class="hours-badge badge-extra">+${fmtHrs(sumExtra)}</span>`
-    : `<span class="hours-badge badge-extra" style="opacity:0.35;">0h</span>`;
+  if (!hayDatos) { bar.style.display = 'none'; return; }
+
+  bar.style.display  = 'flex';
+  celTot.textContent   = fmtHrs(sumTrab);
+  celExtra.textContent = sumExtra > 0 ? '+' + fmtHrs(sumExtra) : '0h';
 }
 
 /* ============================================================

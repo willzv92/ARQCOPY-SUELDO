@@ -443,22 +443,37 @@ tbody tr:hover { background: #f5f9fc; }
 tbody tr.weekend { background: #fafbfc; }
 tbody tr.weekend:hover { background: #f2f6fa; }
 
-/* Fila de totales al pie de la tabla */
-tfoot tr.totales-row {
+/* Barra de totales debajo de la tabla */
+.totales-bar {
+  display: flex;
+  align-items: center;
+  gap: 28px;
   background: var(--navy);
-  color: #fff;
+  border-radius: 0 0 10px 10px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
 }
-tfoot tr.totales-row td {
-  padding: 10px 12px;
+.totales-bar-label {
+  font-size: 0.70rem;
   font-weight: 700;
-  font-size: 0.82rem;
-  border-top: 2px solid var(--blue);
-}
-tfoot tr.totales-row .totales-label {
-  letter-spacing: 0.06em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
-  font-size: 0.72rem;
   color: #a8c4d8;
+  margin-right: auto;
+}
+.totales-bar-item {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  font-weight: 500;
+}
+.totales-bar-val {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  color: #fff;
+  margin-left: 4px;
+}
+.totales-bar-extra {
+  color: var(--orange);
 }
 tbody tr.finde-oculto { display: none; }
 
