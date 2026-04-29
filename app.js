@@ -1104,3 +1104,111 @@ function borrarAvance(id) {
   guardarAvancesEnStorage(lista);
   abrirModalCargar(); // refrescar lista
 }
+
+/* ============================================================
+   EXPORTAR / IMPORTAR AVANCE (JSON)
+   ============================================================ */
+function exportarAvance() {
+  const nombre        = document.getElementById('nombreEmpleado').value.trim();
+  const mes           = parseInt(document.getElementById('mes').value);
+  const anio          = parseInt(document.getElementById('anio').value);
+  const seguro        = document.getElementById('seguro').value;
+  const diaActivacion = parseInt(document.getElementById('diaActivacion')?.value) || 1;
+  const filas         = document.querySelectorAll('#tbodyDias tr[data-dia]');
+
+  if (!filas.length) {
+    mostrarStatus('⚠ Genera los días del mes primero', true);
+    return;
+  }
+
+  const dias = [];
+  filas.forEach(fila => {
+    const d = parseInt(fila.dataset.dia);
+    dias.push({
+      dia:      d,
+      entrada:  document.getElementById('entrada_' + d)?.value  || '',
+      salida:   document.getElementById('salida_'  + d)?.value  || '',
+      almuerzo: document.getElementById('almuerzo_' + d)?.value || '0',
+    });
+  });
+
+  const descuentos = [];
+  document.querySelectorAll('.descuento-item').forEach(item => {
+    const id = item.id.replace('descItem_', '');
+    descuentos.push({
+      concepto: document.getElementById('descConcepto_' + id)?.value || '',
+      monto:    document.getElementById('descMonto_'    + id)?.value || '0',
+    });
+  });
+
+  const avance = {
+    nombre: nombre || '(Sin nombre)',
+    mes, anio, seguro, diaActivacion,
+    dias, descuentos,
+    exportadoEn: new Date().toLocaleString('es-PE'),
+  };
+
+  const blob = new Blob([JSON.stringify(avance, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'arqcopy_' + (nombre || 'avance').replace(/\s+/g, '_') + '_' + MESES[mes] + anio + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  mostrarStatus('✓ Exportado: ' + avance.nombre + ' — ' + MESES[mes] + ' ' + anio);
+}
+
+function importarAvance(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let avance;
+    try {
+      avance = JSON.parse(e.target.result);
+    } catch (err) {
+      mostrarStatus('⚠ Archivo inválido', true);
+      return;
+    }
+
+    document.getElementById('nombreEmpleado').value = avance.nombre !== '(Sin nombre)' ? avance.nombre : '';
+    document.getElementById('mes').value            = avance.mes;
+    document.getElementById('anio').value           = avance.anio;
+    document.getElementById('seguro').value         = avance.seguro;
+    const diaActEl = document.getElementById('diaActivacion');
+    if (diaActEl) diaActEl.value = avance.diaActivacion != null ? avance.diaActivacion : 1;
+    actualizarInfoSeguro();
+
+    generarDias();
+
+    requestAnimationFrame(function() {
+      (avance.dias || []).forEach(function(item) {
+        const entEl = document.getElementById('entrada_'  + item.dia);
+        const salEl = document.getElementById('salida_'   + item.dia);
+        const almEl = document.getElementById('almuerzo_' + item.dia);
+        if (!entEl) return;
+        entEl.value = item.entrada;
+        salEl.value = item.salida;
+        almEl.value = item.almuerzo;
+        calcularFila(item.dia);
+      });
+
+      document.getElementById('listaDescuentos').innerHTML = '';
+      descuentoIdCounter = 0;
+      (avance.descuentos || []).forEach(function(d) {
+        agregarDescuento();
+        const id  = descuentoIdCounter;
+        const cEl = document.getElementById('descConcepto_' + id);
+        const mEl = document.getElementById('descMonto_'    + id);
+        if (cEl) cEl.value = d.concepto;
+        if (mEl) mEl.value = d.monto;
+      });
+      actualizarTotalDescuentos();
+      mostrarStatus('✓ Importado: ' + avance.nombre + ' — ' + MESES[avance.mes] + ' ' + avance.anio);
+      document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
+    });
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
