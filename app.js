@@ -83,18 +83,36 @@ function fmtHrs(h) {
    INFO DE SEGURO SOCIAL
    ============================================================ */
 function actualizarInfoSeguro() {
-  const tipo   = document.getElementById('seguro').value;
-  const banner = document.getElementById('seguroInfo');
-  const texto  = document.getElementById('seguroInfoText');
+  const tipo        = document.getElementById('seguro').value;
+  const banner      = document.getElementById('seguroInfo');
+  const texto       = document.getElementById('seguroInfoText');
+  const grupodia    = document.getElementById('grupoDiaActivacion');
+  const diaEl       = document.getElementById('diaActivacion');
 
-  if (tipo === 'afp') {
-    banner.style.display = 'flex';
-    texto.textContent = 'AFP: descuento del 11.37% sobre el sueldo bruto (aportes al fondo de pensiones privado).';
-  } else if (tipo === 'onp') {
-    banner.style.display = 'flex';
-    texto.textContent = 'ONP: descuento del 13% sobre el sueldo bruto (Sistema Nacional de Pensiones).';
+  // Mostrar / ocultar campo de día de activación
+  if (tipo !== 'ninguno') {
+    grupodia.style.display = 'block';
   } else {
-    banner.style.display = 'none';
+    grupodia.style.display = 'none';
+    banner.style.display   = 'none';
+    return;
+  }
+
+  const dia   = parseInt(diaEl.value) || 1;
+  const tasa  = tipo === 'afp' ? TASA_AFP : TASA_ONP;
+  const label = tipo === 'afp' ? 'AFP (11.37%)' : 'ONP (13%)';
+
+  let baseCalculo, descCalc;
+  if (dia <= 1) {
+    baseCalculo = SUELDO_BASE;
+    descCalc    = SUELDO_BASE * tasa;
+    banner.style.display = 'flex';
+    texto.textContent = `${label}: descuento sobre sueldo base completo S/ 1,130 → descuento = ${fmtSol(descCalc)}.`;
+  } else {
+    baseCalculo = SUELDO_BASE * ((DIAS_MES_BASE - (dia - 1)) / DIAS_MES_BASE);
+    descCalc    = baseCalculo * tasa;
+    banner.style.display = 'flex';
+    texto.textContent = `${label}: activación día ${dia} → base proporcional = S/ 1,130 × (${DIAS_MES_BASE - (dia - 1)}/${DIAS_MES_BASE}) = ${fmtSol(baseCalculo)} → descuento = ${fmtSol(descCalc)}.`;
   }
 }
 
@@ -342,19 +360,32 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
 
   const bruto = sueldoProporcional + pagoExtras;
 
-  // Seguro: SIEMPRE sobre S/ 1,130 fijo sin excepción
+  // ── Seguro: base siempre S/ 1,130, pero proporcional si activación ≠ día 1
   let descuentoSeguro = 0;
   let labelSeguro     = 'No Inscrito';
   let tasaSeguro      = 0;
+  let baseSeguro      = SUELDO_BASE;          // base sobre la que se aplica el %
+  let diaActivacion   = 1;
+  let esProporcionado = false;
 
-  if (tipoSeguro === 'afp') {
-    tasaSeguro      = TASA_AFP;
-    descuentoSeguro = SUELDO_BASE * tasaSeguro;
-    labelSeguro     = `AFP (${(tasaSeguro * 100).toFixed(2)}%)`;
-  } else if (tipoSeguro === 'onp') {
-    tasaSeguro      = TASA_ONP;
-    descuentoSeguro = SUELDO_BASE * tasaSeguro;
-    labelSeguro     = `ONP (${(tasaSeguro * 100).toFixed(2)}%)`;
+  if (tipoSeguro === 'afp' || tipoSeguro === 'onp') {
+    tasaSeguro    = tipoSeguro === 'afp' ? TASA_AFP : TASA_ONP;
+    diaActivacion = parseInt(document.getElementById('diaActivacion')?.value) || 1;
+
+    if (diaActivacion > 1) {
+      // Proporcional: S/ 1,130 × (30 − (día − 1)) / 30
+      const diasEfectivos = DIAS_MES_BASE - (diaActivacion - 1);
+      baseSeguro    = SUELDO_BASE * (diasEfectivos / DIAS_MES_BASE);
+      esProporcionado = true;
+    }
+
+    descuentoSeguro = baseSeguro * tasaSeguro;
+
+    const pct   = (tasaSeguro * 100).toFixed(2);
+    const tipo  = tipoSeguro === 'afp' ? 'AFP' : 'ONP';
+    labelSeguro = esProporcionado
+      ? `${tipo} (${pct}%) — activación día ${diaActivacion}`
+      : `${tipo} (${pct}%)`;
   }
 
   const descuentosAdicionales = obtenerDescuentosAdicionales();
@@ -373,6 +404,9 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
     descuentoSeguro,
     labelSeguro,
     tasaSeguro,
+    baseSeguro,
+    diaActivacion,
+    esProporcionado,
     descuentosAdicionales,
     totalDescAdicional,
     neto,
@@ -550,11 +584,20 @@ function calcularYMostrar() {
   // ── Seguro
   let seccionSeguro = '';
   if (s.descuentoSeguro > 0) {
-    seccionSeguro = `
+    if (s.esProporcionado) {
+      const diasEfectivos = DIAS_MES_BASE - (s.diaActivacion - 1);
+      seccionSeguro = `
       <div class="boleta-row">
-        <span class="label">${s.labelSeguro} sobre S/ 1,130 (base fija)</span>
+        <span class="label">${s.labelSeguro} — base: S/ 1,130 × (${diasEfectivos}/${DIAS_MES_BASE} días desde día ${s.diaActivacion}) = ${fmtSol(s.baseSeguro)}</span>
         <span class="value desc">- ${fmtSol(s.descuentoSeguro)}</span>
       </div>`;
+    } else {
+      seccionSeguro = `
+      <div class="boleta-row">
+        <span class="label">${s.labelSeguro} sobre S/ 1,130 (inscrito desde día 1)</span>
+        <span class="value desc">- ${fmtSol(s.descuentoSeguro)}</span>
+      </div>`;
+    }
   }
 
   // ── Descuentos adicionales
@@ -897,6 +940,7 @@ function guardarAvance() {
   const mes     = parseInt(document.getElementById('mes').value);
   const anio    = parseInt(document.getElementById('anio').value);
   const seguro  = document.getElementById('seguro').value;
+  const diaActivacion = parseInt(document.getElementById('diaActivacion')?.value) || 1;
   const filas   = document.querySelectorAll('#tbodyDias tr[data-dia]');
 
   if (!filas.length) {
@@ -932,6 +976,7 @@ function guardarAvance() {
     mes,
     anio,
     seguro,
+    diaActivacion,
     dias,
     descuentos,
     guardadoEn: new Date().toLocaleString('es-PE'),
@@ -1014,6 +1059,8 @@ function cargarAvance(id) {
   document.getElementById('mes').value            = avance.mes;
   document.getElementById('anio').value           = avance.anio;
   document.getElementById('seguro').value         = avance.seguro;
+  const diaActEl = document.getElementById('diaActivacion');
+  if (diaActEl) diaActEl.value = avance.diaActivacion ?? 1;
   actualizarInfoSeguro();
 
   // Regenerar la tabla de días (crea los inputs)
