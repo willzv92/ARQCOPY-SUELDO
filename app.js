@@ -221,22 +221,24 @@ function calcularFila(dia) {
 
 /* ============================================================
    OBTENER TOTALES DE LA TABLA
-   Reglas:
-   1. Cada día se calcula su déficit (< 8h) o sus extras (> 8h).
-   2. Las horas extras del mes compensan el déficit acumulado.
-   3. Si el déficit supera las extras disponibles, el sueldo
-      se calcula por horas reales trabajadas (sin el proporcional
-      de días completos).
+   Regla 1: Cumple 8h todos los días → sueldo base S/1,130 + extras.
+   Regla 2: Días faltantes → primero cubrir con horas extras (tramo
+            35% primero, luego 25%). Si se cubren → sueldo completo.
+   Regla 3: Sin extras o insuficientes → sueldo proporcional a horas
+            reales / (díasMes × 8h).
    ============================================================ */
 function obtenerTotalesAsistencia() {
-  const filas = document.querySelectorAll('#tbodyDias tr');
+  const mes           = parseInt(document.getElementById('mes').value);
+  const anio          = parseInt(document.getElementById('anio').value);
+  const diasRealesMes = getDiasEnMes(mes, anio);
+  const horasRegla    = diasRealesMes * HORAS_DIARIAS; // horas "perfectas" del mes
 
-  let diasTrabajados  = 0;
-  let totalHorasTrab  = 0;   // horas brutas registradas
-  let extrasPool_25   = 0;   // horas extras brutas al 25% (antes de compensar)
-  let extrasPool_35   = 0;   // horas extras brutas al 35% (antes de compensar)
-  let totalExtrasBruto = 0;  // total extras brutas (para stats)
-  let deficitTotal    = 0;   // horas que faltan para completar 8h/día
+  const filas = document.querySelectorAll('#tbodyDias tr[data-dia]');
+
+  let horasTrabajadas  = 0;  // horas reales con registro
+  let extrasPool_25    = 0;  // h.e. al 25% disponibles antes de compensar
+  let extrasPool_35    = 0;  // h.e. al 35% disponibles antes de compensar
+  let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
 
   filas.forEach(fila => {
     const d = fila.dataset.dia;
@@ -246,12 +248,15 @@ function obtenerTotalesAsistencia() {
     const salida   = document.getElementById(`salida_${d}`)?.value;
     const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
 
-    if (!entrada || !salida || entrada >= salida) return;
+    // Día sin registro válido → falta completa → 8h de déficit
+    if (!entrada || !salida || entrada >= salida) {
+      deficitBruto += HORAS_DIARIAS;
+      return;
+    }
 
-    // Día de descanso: 8h exactas, ni extras ni déficit
+    // Día de descanso (00:00–08:00, 0 almuerzo) → 8h exactas
     if (esDescanso(entrada, salida, almuerzo)) {
-      diasTrabajados++;
-      totalHorasTrab += HORAS_DIARIAS;
+      horasTrabajadas += HORAS_DIARIAS;
       return;
     }
 
@@ -259,85 +264,74 @@ function obtenerTotalesAsistencia() {
     const [sh, sm] = salida.split(':').map(Number);
     const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
 
-    diasTrabajados++;
-    totalHorasTrab += horas;
+    horasTrabajadas += horas;
 
-    if (horas >= HORAS_DIARIAS) {
-      // Día con horas extras — corte diario 25% / 35%
-      const extras  = horas - HORAS_DIARIAS;
-      extrasPool_25   += Math.min(extras, 2);
-      extrasPool_35   += Math.max(0, extras - 2);
-      totalExtrasBruto += extras;
-    } else {
-      // Día con déficit de horas
-      deficitTotal += (HORAS_DIARIAS - horas);
+    if (horas > HORAS_DIARIAS) {
+      // Extras del día — corte diario: primeras 2h → 25%, resto → 35%
+      const extras = horas - HORAS_DIARIAS;
+      extrasPool_25 += Math.min(extras, 2);
+      extrasPool_35 += Math.max(0, extras - 2);
+    } else if (horas < HORAS_DIARIAS) {
+      deficitBruto += (HORAS_DIARIAS - horas);
     }
   });
 
-  // ── COMPENSACIÓN: déficit absorbe extras (más caras primero → 35% → 25%)
-  // Primero se consumen las horas extra del tramo 35% (las más caras)
-  let deficitRestante = deficitTotal;
+  // ── COMPENSACIÓN (Regla 2):
+  // Las extras cubren el déficit. Orden: tramo 35% primero (más caro),
+  // luego tramo 25%. Las horas extras usadas NO se pagan.
+  let deficitRestante = deficitBruto;
 
-  const consumido_35 = Math.min(deficitRestante, extrasPool_35);
-  extrasPool_35    -= consumido_35;
-  deficitRestante  -= consumido_35;
+  const usado_35 = Math.min(deficitRestante, extrasPool_35);
+  extrasPool_35   -= usado_35;
+  deficitRestante -= usado_35;
 
-  const consumido_25 = Math.min(deficitRestante, extrasPool_25);
-  extrasPool_25    -= consumido_25;
-  deficitRestante  -= consumido_25;
+  const usado_25 = Math.min(deficitRestante, extrasPool_25);
+  extrasPool_25   -= usado_25;
+  deficitRestante -= usado_25;
 
-  // ── RESULTADO neto de extras tras compensar
+  // Extras netas (las que quedan tras compensar el déficit)
   const totalExtras_25 = extrasPool_25;
   const totalExtras_35 = extrasPool_35;
-  const totalExtras    = totalExtras_25 + totalExtras_35; // netas
+  const totalExtras    = totalExtras_25 + totalExtras_35;
 
-  // ── DÉFICIT sin cubrir → horas no compensadas que reducen el sueldo
-  const horasNoCubiertas = deficitRestante; // > 0 solo si extras no alcanzaron
+  // Horas de déficit que las extras NO pudieron cubrir (Regla 3)
+  const horasNoCubiertas = deficitRestante;
+
+  // Horas efectivas = trabajadas + extras usadas para compensar
+  // (para mostrar en stats, no para el cálculo de sueldo)
+  const horasEfectivas = horasTrabajadas + (deficitBruto - horasNoCubiertas);
 
   return {
-    diasTrabajados,
-    totalHorasTrab,
+    diasRealesMes,
+    horasRegla,
+    horasTrabajadas,
+    horasEfectivas,
     totalExtras,
     totalExtras_25,
     totalExtras_35,
-    totalExtrasBruto,
-    deficitTotal,
+    deficitBruto,
     horasNoCubiertas,
   };
 }
 
 /* ============================================================
    CÁLCULO DE SUELDO
-   Regla: el sueldo base siempre es S/ 1,130 por el mes completo.
-   Si faltan días: descuento = (díasAusentes / 30) × 1,130.
-   Si hay horas faltantes sin cubrir: descuento adicional por hora.
+   Regla 1: horasNoCubiertas = 0 → sueldo = S/1,130 + extras.
+   Regla 2: horasNoCubiertas = 0 (cubiertas por extras) → ídem.
+   Regla 3: horasNoCubiertas > 0 → sueldo proporcional a horas
+            reales: (horasEfectivas / horasRegla) × 1,130 + extras.
+   Seguro AFP/ONP: SIEMPRE sobre S/1,130 fijo.
    ============================================================ */
-function calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras_35, horasNoCubiertas) {
-  const mes    = parseInt(document.getElementById('mes').value);
-  const anio   = parseInt(document.getElementById('anio').value);
+function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas) {
   const tipoSeguro = document.getElementById('seguro').value;
+  const valorHora  = VALOR_HORA; // S/ 1,130 / 30 / 8
 
-  // Días reales del mes seleccionado (puede ser 28, 29, 30 o 31)
-  const diasRealesMes = getDiasEnMes(mes, anio);
-
-  // Días ausentes = días del mes real sin registro válido
-  // (diasTrabajados ya incluye descansos y días con cualquier hora registrada)
-  const diasAusentes = Math.max(0, diasRealesMes - diasTrabajados);
-
-  // Sueldo base: siempre 1,130; se descuenta proporcionalmente por ausencias
-  // Base: 30 días (ley peruana), independiente del mes real
-  const descuentoAusencia  = (diasAusentes / DIAS_MES_BASE) * SUELDO_BASE;
-  const sueldoBase         = SUELDO_BASE - descuentoAusencia;
-
-  // Valor hora para descuento por horas faltantes no cubiertas
-  const valorHora = VALOR_HORA; // 1130 / 30 / 8
-
-  // Descuento adicional por horas faltantes que las extras no cubrieron
-  const descuentoDeficit = horasNoCubiertas > 0
-    ? horasNoCubiertas * valorHora
-    : 0;
-
-  const sueldoProporcional = Math.max(0, sueldoBase - descuentoDeficit);
+  // Sueldo base proporcional
+  // - Si no hay déficit residual → S/ 1,130 completo (reglas 1 y 2)
+  // - Si hay déficit → proporcional a horas efectivas (regla 3)
+  const sueldoProporcional = horasNoCubiertas > 0
+    ? (horasEfectivas / horasRegla) * SUELDO_BASE
+    : SUELDO_BASE;
 
   // Pago horas extras netas
   const extras_25  = totalExtras_25;
@@ -348,35 +342,29 @@ function calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras
 
   const bruto = sueldoProporcional + pagoExtras;
 
-  // Descuento seguro: SOLO sobre sueldo base (no extras)
+  // Seguro: SIEMPRE sobre S/ 1,130 fijo sin excepción
   let descuentoSeguro = 0;
   let labelSeguro     = 'No Inscrito';
   let tasaSeguro      = 0;
 
   if (tipoSeguro === 'afp') {
     tasaSeguro      = TASA_AFP;
-    descuentoSeguro = sueldoProporcional * tasaSeguro;
+    descuentoSeguro = SUELDO_BASE * tasaSeguro;
     labelSeguro     = `AFP (${(tasaSeguro * 100).toFixed(2)}%)`;
   } else if (tipoSeguro === 'onp') {
     tasaSeguro      = TASA_ONP;
-    descuentoSeguro = sueldoProporcional * tasaSeguro;
+    descuentoSeguro = SUELDO_BASE * tasaSeguro;
     labelSeguro     = `ONP (${(tasaSeguro * 100).toFixed(2)}%)`;
   }
 
-  // Descuentos adicionales
   const descuentosAdicionales = obtenerDescuentosAdicionales();
   const totalDescAdicional    = descuentosAdicionales.reduce((s, d) => s + d.monto, 0);
 
   const neto = bruto - descuentoSeguro - totalDescAdicional;
 
   return {
-    diasRealesMes,
-    diasAusentes,
-    descuentoAusencia,
-    sueldoBase,
     valorHora,
     sueldoProporcional,
-    descuentoDeficit,
     horasNoCubiertas,
     extras_25,
     extras_35,
@@ -398,13 +386,13 @@ function actualizarStats() {
   const statsGrid = document.getElementById('statsGrid');
   if (!statsGrid) return;
 
-  const { diasTrabajados, totalHorasTrab, totalExtras, totalExtras_25, totalExtras_35, deficitTotal, horasNoCubiertas } = obtenerTotalesAsistencia();
-  const s = calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras_35, horasNoCubiertas);
+  const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia();
+  const s = calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas);
 
   statsGrid.innerHTML = `
     <div class="stat-card">
-      <span class="stat-label">Días Trabajados</span>
-      <span class="stat-value c-blue">${diasTrabajados}</span>
+      <span class="stat-label">Días del Mes</span>
+      <span class="stat-value c-blue">${diasRealesMes}</span>
     </div>
     <div class="stat-card">
       <span class="stat-label">Valor Hora</span>
@@ -418,9 +406,9 @@ function actualizarStats() {
       <span class="stat-label">Pago H. Extras</span>
       <span class="stat-value c-orange">${fmtSol(s.pagoExtras)}</span>
     </div>
-    ${deficitTotal > 0 ? `
+    ${horasNoCubiertas > 0 ? `
     <div class="stat-card">
-      <span class="stat-label">Déficit sin cubrir</span>
+      <span class="stat-label">Horas sin cubrir</span>
       <span class="stat-value c-danger">${horasNoCubiertas.toFixed(2)}h</span>
     </div>` : ''}
     <div class="stat-card">
@@ -505,56 +493,71 @@ function calcularYMostrar() {
   const mes    = parseInt(document.getElementById('mes').value);
   const anio   = parseInt(document.getElementById('anio').value);
 
-  const { diasTrabajados, totalHorasTrab, totalExtras, totalExtras_25, totalExtras_35, deficitTotal, horasNoCubiertas } = obtenerTotalesAsistencia();
-  const s = calcularSueldo(diasTrabajados, totalExtras, totalExtras_25, totalExtras_35, horasNoCubiertas);
+  const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia();
+  const s = calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas);
 
   const hoy = new Date().toLocaleDateString('es-PE', {
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  // Fila de descuento por horas no cubiertas
-  let rowDeficit = '';
-  if (s.horasNoCubiertas > 0) {
-    rowDeficit = `
+  // ── Regla 3: sueldo proporcional a horas (horasNoCubiertas > 0)
+  // Muestra el desglose: horas efectivas / horas reglamentarias
+  const rowSueldoBase = horasNoCubiertas > 0
+    ? `
+      <div class="boleta-row">
+        <span class="label">Sueldo Base Mensual (S/ 1,130 referencia)</span>
+        <span class="value">${fmtSol(SUELDO_BASE)}</span>
+      </div>
       <div class="boleta-row">
         <span class="label">
-          Desc. horas faltantes (${fmtHrs(s.horasNoCubiertas)} × ${fmtSol(s.valorHora)})
+          Proporcional por horas (${horasEfectivas.toFixed(2)}h / ${horasRegla}h regl.)
         </span>
-        <span class="value desc">- ${fmtSol(s.descuentoDeficit)}</span>
+        <span class="value desc">= ${fmtSol(s.sueldoProporcional)}</span>
+      </div>`
+    : `
+      <div class="boleta-row">
+        <span class="label">Sueldo Base Mensual (mes completo)</span>
+        <span class="value">${fmtSol(SUELDO_BASE)}</span>
       </div>`;
-  }
 
-  // Filas de horas extras
+  // ── Extras netas
   let rowsExtras = '';
   if (s.extras_25 > 0) {
     rowsExtras += `
       <div class="boleta-row">
-        <span class="label">
-          H. Extras al 25% (${fmtHrs(s.extras_25)} × ${fmtSol(s.valorHora * 1.25)})
-        </span>
+        <span class="label">H. Extras al 25% (${fmtHrs(s.extras_25)} × ${fmtSol(s.valorHora * 1.25)})</span>
         <span class="value extra">+ ${fmtSol(s.extras_25 * s.valorHora * (1 + TASA_EXTRA_25))}</span>
       </div>`;
   }
   if (s.extras_35 > 0) {
     rowsExtras += `
       <div class="boleta-row">
-        <span class="label">
-          H. Extras al 35% (${fmtHrs(s.extras_35)} × ${fmtSol(s.valorHora * 1.35)})
-        </span>
+        <span class="label">H. Extras al 35% (${fmtHrs(s.extras_35)} × ${fmtSol(s.valorHora * 1.35)})</span>
         <span class="value extra">+ ${fmtSol(s.extras_35 * s.valorHora * (1 + TASA_EXTRA_35))}</span>
       </div>`;
   }
 
+  // ── Nota de extras usadas para compensar déficit (informativa)
+  const horasCompensadas = deficitBruto - horasNoCubiertas;
+  const rowCompensacion = horasCompensadas > 0 ? `
+      <div class="boleta-row">
+        <span class="label" style="color:var(--muted);font-style:italic;">
+          H. Extras usadas para cubrir déficit (${fmtHrs(horasCompensadas)}) — no se pagan
+        </span>
+        <span class="value" style="color:var(--muted);">—</span>
+      </div>` : '';
+
+  // ── Seguro
   let seccionSeguro = '';
   if (s.descuentoSeguro > 0) {
     seccionSeguro = `
       <div class="boleta-row">
-        <span class="label">${s.labelSeguro} sobre sueldo base (no aplica a h. extras)</span>
+        <span class="label">${s.labelSeguro} sobre S/ 1,130 (base fija)</span>
         <span class="value desc">- ${fmtSol(s.descuentoSeguro)}</span>
       </div>`;
   }
 
-  // Descuentos adicionales
+  // ── Descuentos adicionales
   let rowsDescAdicional = '';
   s.descuentosAdicionales.forEach(d => {
     rowsDescAdicional += `
@@ -585,9 +588,7 @@ function calcularYMostrar() {
         <p>
           Seguro: ${s.labelSeguro}
           &nbsp;|&nbsp;
-          Días del mes: ${s.diasRealesMes} (base: ${DIAS_MES_BASE})
-          &nbsp;|&nbsp;
-          Días trabajados: ${diasTrabajados}
+          Días del mes: ${diasRealesMes} &nbsp;|&nbsp; Horas regl.: ${horasRegla}h
           &nbsp;|&nbsp;
           Valor hora: ${fmtSol(VALOR_HORA)}
         </p>
@@ -596,23 +597,9 @@ function calcularYMostrar() {
       <!-- INGRESOS -->
       <div style="margin-bottom:20px;">
         <div class="boleta-section-title ingreso">📥 Ingresos</div>
-
-        <div class="boleta-row">
-          <span class="label">Sueldo Base Mensual</span>
-          <span class="value">${fmtSol(SUELDO_BASE)}</span>
-        </div>
-        ${s.diasAusentes > 0 ? `
-        <div class="boleta-row">
-          <span class="label">Desc. días ausentes (${s.diasAusentes} día${s.diasAusentes > 1 ? 's' : ''} × ${fmtSol(SUELDO_BASE / DIAS_MES_BASE)}/día)</span>
-          <span class="value desc">- ${fmtSol(s.descuentoAusencia)}</span>
-        </div>` : ''}
-        <div class="boleta-row">
-          <span class="label">Sueldo Base Neto (${diasTrabajados} / ${DIAS_MES_BASE} días)</span>
-          <span class="value">${fmtSol(s.sueldoBase)}</span>
-        </div>
-        ${rowDeficit}
+        ${rowSueldoBase}
+        ${rowCompensacion}
         ${rowsExtras}
-
         <div class="boleta-subtotal">
           <span>Total Ingresos (Bruto)</span>
           <span class="value">${fmtSol(s.bruto)}</span>
@@ -620,7 +607,7 @@ function calcularYMostrar() {
       </div>
 
       <!-- DESCUENTOS -->
-      ${(hayDescuentos || s.descuentoDeficit > 0) ? `
+      ${hayDescuentos ? `
       <div style="margin-bottom:20px;">
         <div class="boleta-section-title descuento">📤 Descuentos</div>
         ${seccionSeguro}
@@ -1069,137 +1056,4 @@ function borrarAvance(id) {
   const lista    = obtenerAvancesGuardados().filter(a => a.id !== id);
   guardarAvancesEnStorage(lista);
   abrirModalCargar(); // refrescar lista
-}
-
-/* ============================================================
-   EXPORTAR / IMPORTAR AVANCE COMO ARCHIVO JSON
-   ============================================================ */
-
-/* Exporta el estado actual a un archivo .json que el usuario descarga */
-function exportarAvance() {
-  const filas = document.querySelectorAll('#tbodyDias tr[data-dia]');
-  if (!filas.length) {
-    mostrarStatus('⚠ Genera los días del mes primero', true);
-    return;
-  }
-
-  const nombre  = document.getElementById('nombreEmpleado').value.trim() || 'Empleado';
-  const mes     = parseInt(document.getElementById('mes').value);
-  const anio    = parseInt(document.getElementById('anio').value);
-  const seguro  = document.getElementById('seguro').value;
-
-  // Capturar horarios
-  const dias = [];
-  filas.forEach(fila => {
-    const d = parseInt(fila.dataset.dia);
-    dias.push({
-      dia:      d,
-      entrada:  document.getElementById(`entrada_${d}`)?.value  || '',
-      salida:   document.getElementById(`salida_${d}`)?.value   || '',
-      almuerzo: document.getElementById(`almuerzo_${d}`)?.value || '0',
-    });
-  });
-
-  // Capturar descuentos adicionales
-  const descuentos = [];
-  document.querySelectorAll('.descuento-item').forEach(item => {
-    const id = item.id.replace('descItem_', '');
-    descuentos.push({
-      concepto: document.getElementById(`descConcepto_${id}`)?.value || '',
-      monto:    document.getElementById(`descMonto_${id}`)?.value   || '0',
-    });
-  });
-
-  const datos = { nombre, mes, anio, seguro, dias, descuentos, exportadoEn: new Date().toLocaleString('es-PE') };
-
-  // Crear y descargar el archivo sin afectar la página actual
-  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href     = url;
-  link.download = `arqcopy_${nombre.replace(/\s+/g, '_')}_${MESES[mes]}_${anio}.json`;
-  link.target   = '_blank';
-  link.rel      = 'noopener';
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.dispatchEvent(new MouseEvent('click', { bubbles: false, cancelable: true, view: window }));
-  setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
-
-  mostrarStatus(`✓ Exportado: ${nombre} — ${MESES[mes]} ${anio}`);
-}
-
-/* Lee el archivo .json seleccionado y restaura el estado completo */
-function importarAvance(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    try {
-      const datos = JSON.parse(e.target.result);
-
-      // Validación mínima
-      if (!datos.dias || !Array.isArray(datos.dias)) {
-        mostrarStatus('⚠ Archivo no válido', true);
-        return;
-      }
-
-      // Restaurar datos del empleado
-      document.getElementById('nombreEmpleado').value = datos.nombre || '';
-      document.getElementById('mes').value            = datos.mes ?? new Date().getMonth();
-      document.getElementById('anio').value           = datos.anio ?? 2026;
-      document.getElementById('seguro').value         = datos.seguro || 'ninguno';
-      actualizarInfoSeguro();
-
-      // Regenerar tabla del mes correspondiente
-      generarDias();
-
-      // Restaurar horarios fila a fila
-      requestAnimationFrame(() => {
-        datos.dias.forEach(({ dia, entrada, salida, almuerzo }) => {
-          const entEl = document.getElementById(`entrada_${dia}`);
-          const salEl = document.getElementById(`salida_${dia}`);
-          const almEl = document.getElementById(`almuerzo_${dia}`);
-          if (!entEl) return;
-          entEl.value = entrada;
-          salEl.value = salida;
-          almEl.value = almuerzo;
-          calcularFila(dia);
-        });
-
-        // Restaurar descuentos adicionales
-        document.getElementById('listaDescuentos').innerHTML = '';
-        descuentoIdCounter = 0;
-        (datos.descuentos || []).forEach(({ concepto, monto }) => {
-          agregarDescuento();
-          const id = descuentoIdCounter;
-          const cEl = document.getElementById(`descConcepto_${id}`);
-          const mEl = document.getElementById(`descMonto_${id}`);
-          if (cEl) cEl.value = concepto;
-          if (mEl) mEl.value = monto;
-        });
-        actualizarTotalDescuentos();
-
-        mostrarStatus(`✓ Importado: ${datos.nombre} — ${MESES[datos.mes]} ${datos.anio}`);
-        document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
-      });
-    } catch {
-      mostrarStatus('⚠ Error al leer el archivo', true);
-    }
-  };
-  reader.readAsText(file);
-
-  // Resetear el input para permitir cargar el mismo archivo de nuevo si se quiere
-  event.target.value = '';
-}
-
-/* Mensaje de estado bajo los botones */
-function mostrarStatus(msg, esError = false) {
-  const el = document.getElementById('saveStatus');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = esError ? 'var(--danger)' : 'var(--success)';
-  el.classList.add('visible');
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove('visible'), 3500);
 }
