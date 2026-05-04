@@ -653,8 +653,8 @@ function obtenerResumenEmpleado() {
   
   filas.forEach(fila => {
     const dia = parseInt(fila.dataset.dia);
-    const noLaborado = parseInt(fila.dataset.noLaboro) === 1;
-    const esFinde = parseInt(fila.dataset.finde) === 1;
+    const noLaborado = fila.classList.contains('no-laborado');
+    const esFinde = fila.classList.contains('weekend');
     
     // No contar días antes del inicio laboral
     if (noLaborado) return;
@@ -662,19 +662,24 @@ function obtenerResumenEmpleado() {
     // Para fines de semana: no contar como falta
     if (esFinde) return;
     
-    // Obtener las horas de esta fila
-    const horasTrabEl = document.getElementById(`horasTrab_${dia}`);
-    const horasExtraEl = document.getElementById(`horasExtra_${dia}`);
+    // Obtener la celda que contiene las horas trabajadas
+    const horasTrabEl = fila.querySelector(`td:nth-child(5)`); // Columna "Horas Trab."
     
-    const horasTrab = horasTrabEl ? parseFloat(horasTrabEl.textContent) || 0 : 0;
-    const horasExtra = horasExtraEl ? parseFloat(horasExtraEl.textContent) || 0 : 0;
+    if (!horasTrabEl) return;
     
-    // Día laboral (lunes a viernes después del inicio)
-    if (horasTrab > 0 || horasExtra > 0) {
-      diasTrabajados++;
-    } else {
-      // Día laboral sin horas = falta
+    const contenidoHoras = horasTrabEl.textContent.trim();
+    
+    // Si contiene un badge "No laboró" o está vacío
+    if (contenidoHoras.includes('No laboró') || contenidoHoras === '—' || !contenidoHoras) {
       diasFalta++;
+    } else {
+      // Intentar parsear como número
+      const horas = parseFloat(contenidoHoras);
+      if (!isNaN(horas) && horas > 0) {
+        diasTrabajados++;
+      } else {
+        diasFalta++;
+      }
     }
   });
   
@@ -792,11 +797,37 @@ function calcularYMostrar() {
   
   // Obtener resumen del empleado
   const resumen = obtenerResumenEmpleado();
-  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
-  
-  // Calcular días laborales posibles para el período
-  const diasLaboralesPosibles = DIAS_MES_BASE - (diaInicio - 1);
-  const diasNoLaborado = diaInicio - 1;
+  console.log('Resumen obtenido:', resumen);
+
+  // Construir HTML de resumen
+  const resumenHTML = `
+    <!-- RESUMEN DEL EMPLEADO -->
+    <div class="boleta-resumen">
+      <div class="boleta-section-title">📊 Resumen</div>
+      <div class="resumen-grid">
+        <div class="resumen-item">
+          <span class="resumen-label">Días trabajados</span>
+          <span class="resumen-value">${resumen.diasTrabajados}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Días que faltó</span>
+          <span class="resumen-value">${resumen.diasFalta}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Horas Trabajadas</span>
+          <span class="resumen-value">${horasEfectivas.toFixed(2)}h</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Horas extras 25%</span>
+          <span class="resumen-value">${resumen.horasTrabajadas25.toFixed(2)}h</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Horas extras 35%</span>
+          <span class="resumen-value">${resumen.horasTrabajadas35.toFixed(2)}h</span>
+        </div>
+      </div>
+    </div>
+  `;
 
   document.getElementById('boletaContainer').innerHTML = `
     <div class="boleta">
@@ -856,32 +887,7 @@ function calcularYMostrar() {
 
       <hr class="boleta-divider" />
 
-      <!-- RESUMEN DEL EMPLEADO -->
-      <div class="boleta-resumen">
-        <div class="boleta-section-title">📊 Resumen</div>
-        <div class="resumen-grid">
-          <div class="resumen-item">
-            <span class="resumen-label">Días trabajados</span>
-            <span class="resumen-value">${resumen.diasTrabajados}</span>
-          </div>
-          <div class="resumen-item">
-            <span class="resumen-label">Días que faltó</span>
-            <span class="resumen-value">${resumen.diasFalta}</span>
-          </div>
-          <div class="resumen-item">
-            <span class="resumen-label">Horas Trabajadas</span>
-            <span class="resumen-value">${horasEfectivas.toFixed(2)}h</span>
-          </div>
-          <div class="resumen-item">
-            <span class="resumen-label">Horas extras 25%</span>
-            <span class="resumen-value">${resumen.horasTrabajadas25.toFixed(2)}h</span>
-          </div>
-          <div class="resumen-item">
-            <span class="resumen-label">Horas extras 35%</span>
-            <span class="resumen-value">${resumen.horasTrabajadas35.toFixed(2)}h</span>
-          </div>
-        </div>
-      </div>
+      ${resumenHTML}
 
       <div class="boleta-actions">
         <button class="btn btn-ghost btn-sm" onclick="imprimirBoleta()">
