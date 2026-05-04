@@ -683,14 +683,77 @@ function obtenerResumenEmpleado() {
     }
   });
   
-  // Obtener totales de horas
-  const { totalExtras_25, totalExtras_35 } = obtenerTotalesAsistencia();
+  // Obtener totales de horas SIN las que se usaron para compensar el déficit
+  // extrasPool_25 y extrasPool_35 son las horas extras NETAS disponibles después de compensación
+  const mes           = parseInt(document.getElementById('mes').value);
+  const anio          = parseInt(document.getElementById('anio').value);
+  const diasRealesMes = getDiasEnMes(mes, anio);
+  const diasLaborales = diasRealesMes - (diaInicio - 1);
+  const horasRegla    = diasLaborales * HORAS_DIARIAS;
+
+  const filasDatos = document.querySelectorAll('#tbodyDias tr[data-dia]');
+  let extrasPool_25    = 0;  // h.e. al 25% disponibles ANTES de compensar
+  let extrasPool_35    = 0;  // h.e. al 35% disponibles ANTES de compensar
+  let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
+
+  filasDatos.forEach(fila => {
+    const d = parseInt(fila.dataset.dia);
+    if (!d) return;
+
+    // Días previos al inicio laboral → no generan déficit ni horas
+    if (d < diaInicio) return;
+
+    const entrada  = document.getElementById(`entrada_${d}`)?.value;
+    const salida   = document.getElementById(`salida_${d}`)?.value;
+    const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
+
+    // Día sin registro válido → falta completa → 8h de déficit
+    if (!entrada || !salida || entrada >= salida) {
+      deficitBruto += HORAS_DIARIAS;
+      return;
+    }
+
+    // Día de descanso (00:00–08:00, 0 almuerzo) → 8h exactas
+    if (esDescanso(entrada, salida, almuerzo)) {
+      return;
+    }
+
+    const [eh, em] = entrada.split(':').map(Number);
+    const [sh, sm] = salida.split(':').map(Number);
+    const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
+
+    if (horas > HORAS_DIARIAS) {
+      // Extras del día — corte diario: primeras 2h → 25%, resto → 35%
+      const extras = horas - HORAS_DIARIAS;
+      extrasPool_25 += Math.min(extras, 2);
+      extrasPool_35 += Math.max(0, extras - 2);
+    } else if (horas < HORAS_DIARIAS) {
+      deficitBruto += (HORAS_DIARIAS - horas);
+    }
+  });
+
+  // ── COMPENSACIÓN:
+  // Las extras cubren el déficit. Orden: tramo 35% primero (más caro),
+  // luego tramo 25%. Las horas extras usadas NO se pagan.
+  let deficitRestante = deficitBruto;
+
+  const usado_35 = Math.min(deficitRestante, extrasPool_35);
+  extrasPool_35   -= usado_35;
+  deficitRestante -= usado_35;
+
+  const usado_25 = Math.min(deficitRestante, extrasPool_25);
+  extrasPool_25   -= usado_25;
+  deficitRestante -= usado_25;
+
+  // Horas extras NETAS después de compensación
+  const totalExtras_25_Netas = extrasPool_25;
+  const totalExtras_35_Netas = extrasPool_35;
   
   return {
     diasTrabajados,
     diasFalta,
-    horasTrabajadas25: totalExtras_25,
-    horasTrabajadas35: totalExtras_35
+    horasTrabajadas25: totalExtras_25_Netas,
+    horasTrabajadas35: totalExtras_35_Netas
   };
 }
 
