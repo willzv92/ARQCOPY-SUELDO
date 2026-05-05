@@ -949,17 +949,45 @@ input[type="time"]:focus,
   margin-bottom: 16px;
 }
 
+<<<<<<< HEAD
 .resumen-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+=======
+/* Grid: 2 cols para extras, luego 3 cols para los debe */
+.resumen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+>>>>>>> 1b51e23 (changes in resumen)
   gap: 12px;
   margin-bottom: 16px;
 }
 
+<<<<<<< HEAD
+=======
+/* Horas Extras 25% y 35% → primera fila (2 columnas) */
+.resumen-item--extra25,
+.resumen-item--extra35 {
+  grid-column: span 1;
+}
+
+/* Horas Debe, Días Debe, Horas a Descontar → segunda fila */
+.resumen-item--debe {
+  grid-column: span 1;
+}
+.resumen-item--diasdebe {
+  grid-column: span 1;
+}
+.resumen-item--adescontar {
+  grid-column: 1 / -1; /* ocupa toda la fila */
+}
+
+>>>>>>> 1b51e23 (changes in resumen)
 .resumen-item {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+<<<<<<< HEAD
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -973,13 +1001,84 @@ input[type="time"]:focus,
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+=======
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+.resumen-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+>>>>>>> 1b51e23 (changes in resumen)
 }
 
 .resumen-value {
   font-family: 'Space Mono', monospace;
+<<<<<<< HEAD
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--sky);
+=======
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sky);
+  line-height: 1.4;
+}
+
+/* Variantes de color para valores */
+.resumen-val--orange { color: var(--orange); }
+.resumen-val--danger { color: var(--danger); }
+
+/* Valores con múltiples líneas (Días Debe) */
+.resumen-val--small {
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+/* Nota descriptiva bajo el valor */
+.resumen-note {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.resumen-note--total {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--danger);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+/* Destacar la tarjeta Horas a Descontar */
+.resumen-item--adescontar {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--bg-secondary));
+}
+.resumen-item--adescontar .resumen-label {
+  color: var(--danger);
+}
+
+/* Destacar tarjetas de extras */
+.resumen-item--extra25,
+.resumen-item--extra35 {
+  border-color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 5%, var(--bg-secondary));
+}
+.resumen-item--extra25 .resumen-label,
+.resumen-item--extra35 .resumen-label {
+  color: var(--orange);
+>>>>>>> 1b51e23 (changes in resumen)
 }
 
 .boleta-actions {

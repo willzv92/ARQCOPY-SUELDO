@@ -642,10 +642,27 @@ function actualizarTotalDescuentos() {
 }
 
 /* ============================================================
+<<<<<<< HEAD
+=======
+   HELPERS DE FORMATO PARA EL RESUMEN
+   ============================================================ */
+// Convierte horas decimales → "hh:mm = h.hh"
+function fmtResumenHoras(hDecimal) {
+  const totalMin = Math.round(hDecimal * 60);
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  const hhStr = String(hh).padStart(2, '0');
+  const mmStr = String(mm).padStart(2, '0');
+  return `${hhStr}:${mmStr} = ${hDecimal.toFixed(2)}h`;
+}
+
+/* ============================================================
+>>>>>>> 1b51e23 (changes in resumen)
    OBTENER RESUMEN DEL EMPLEADO (Días trabajados, faltados, horas)
    ============================================================ */
 function obtenerResumenEmpleado() {
   const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
+<<<<<<< HEAD
   const filas = document.querySelectorAll('#tbodyDias tr[data-dia]');
   
   let diasTrabajados = 0;
@@ -702,11 +719,31 @@ function obtenerResumenEmpleado() {
 
     // Días previos al inicio laboral → no generan déficit ni horas
     if (d < diaInicio) return;
+=======
+  const mes       = parseInt(document.getElementById('mes').value);
+  const anio      = parseInt(document.getElementById('anio').value);
+  const filas     = document.querySelectorAll('#tbodyDias tr[data-dia]');
+
+  // Acumuladores
+  let extrasPool_25  = 0;   // h.e. brutas al 25% (antes de compensación)
+  let extrasPool_35  = 0;   // h.e. brutas al 35% (antes de compensación)
+  let horasDebe      = 0;   // déficit de días con horas pero incompletas
+  let diasDebeList   = [];  // días con falta total: [{dia, nombre, horas}]
+
+  filas.forEach(fila => {
+    const d          = parseInt(fila.dataset.dia);
+    const noLaborado = fila.classList.contains('no-laborado');
+    const esFinde    = fila.classList.contains('weekend');
+
+    // Ignorar días previos al inicio laboral y fines de semana
+    if (noLaborado || esFinde || !d) return;
+>>>>>>> 1b51e23 (changes in resumen)
 
     const entrada  = document.getElementById(`entrada_${d}`)?.value;
     const salida   = document.getElementById(`salida_${d}`)?.value;
     const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
 
+<<<<<<< HEAD
     // Día sin registro válido → falta completa → 8h de déficit
     if (!entrada || !salida || entrada >= salida) {
       deficitBruto += HORAS_DIARIAS;
@@ -717,17 +754,34 @@ function obtenerResumenEmpleado() {
     if (esDescanso(entrada, salida, almuerzo)) {
       return;
     }
+=======
+    // Día sin registro válido → falta total → va a diasDebe
+    if (!entrada || !salida || entrada >= salida) {
+      const fecha    = new Date(anio, mes, d);
+      const nombreD  = DIAS_SEMANA[fecha.getDay()];
+      diasDebeList.push({ dia: d, nombre: nombreD, horas: HORAS_DIARIAS });
+      return;
+    }
+
+    // Día de descanso → 8h exactas, sin extras ni déficit
+    if (esDescanso(entrada, salida, almuerzo)) return;
+>>>>>>> 1b51e23 (changes in resumen)
 
     const [eh, em] = entrada.split(':').map(Number);
     const [sh, sm] = salida.split(':').map(Number);
     const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
 
     if (horas > HORAS_DIARIAS) {
+<<<<<<< HEAD
       // Extras del día — corte diario: primeras 2h → 25%, resto → 35%
+=======
+      // Extras brutas del día: primeras 2h → 25%, resto → 35%
+>>>>>>> 1b51e23 (changes in resumen)
       const extras = horas - HORAS_DIARIAS;
       extrasPool_25 += Math.min(extras, 2);
       extrasPool_35 += Math.max(0, extras - 2);
     } else if (horas < HORAS_DIARIAS) {
+<<<<<<< HEAD
       deficitBruto += (HORAS_DIARIAS - horas);
     }
   });
@@ -754,6 +808,23 @@ function obtenerResumenEmpleado() {
     diasFalta,
     horasTrabajadas25: totalExtras_25_Netas,
     horasTrabajadas35: totalExtras_35_Netas
+=======
+      // Déficit parcial del día → va a horasDebe
+      horasDebe += (HORAS_DIARIAS - horas);
+    }
+  });
+
+  // Horas a descontar = horasDebe (parciales) + horas de días completos faltados
+  const horasDiasDebe   = diasDebeList.reduce((s, d) => s + d.horas, 0);
+  const horasADescontar = Math.round((horasDebe + horasDiasDebe) * 10000) / 10000;
+
+  return {
+    extrasPool_25,           // brutas al 25% (sin quitar déficit)
+    extrasPool_35,           // brutas al 35% (sin quitar déficit)
+    horasDebe,               // horas parciales incompletas
+    diasDebeList,            // días con falta total
+    horasADescontar,         // total a descontar
+>>>>>>> 1b51e23 (changes in resumen)
   };
 }
 
@@ -860,7 +931,22 @@ function calcularYMostrar() {
   
   // Obtener resumen del empleado
   const resumen = obtenerResumenEmpleado();
+<<<<<<< HEAD
   console.log('Resumen obtenido:', resumen);
+=======
+
+  // ── Ítem: Días Debe (lista detallada de días con falta total)
+  const diasDebeDetalle = resumen.diasDebeList.length > 0
+    ? resumen.diasDebeList.map(dd => {
+        const horasTotalMin = Math.round(dd.horas * 60);
+        const hh = String(Math.floor(horasTotalMin / 60)).padStart(2, '0');
+        const mm = String(horasTotalMin % 60).padStart(2, '0');
+        return `Día ${dd.dia} ${dd.nombre} = ${hh}:${mm} = ${dd.horas.toFixed(2)}h`;
+      }).join('<br>')
+    : '—';
+
+  const diasDebeHorasTotal = resumen.diasDebeList.reduce((s, d) => s + d.horas, 0);
+>>>>>>> 1b51e23 (changes in resumen)
 
   // Construir HTML de resumen
   const resumenHTML = `
@@ -868,6 +954,7 @@ function calcularYMostrar() {
     <div class="boleta-resumen">
       <div class="boleta-section-title">📊 Resumen</div>
       <div class="resumen-grid">
+<<<<<<< HEAD
         <div class="resumen-item">
           <span class="resumen-label">Días trabajados</span>
           <span class="resumen-value">${resumen.diasTrabajados}</span>
@@ -888,6 +975,47 @@ function calcularYMostrar() {
           <span class="resumen-label">Horas extras 35%</span>
           <span class="resumen-value">${resumen.horasTrabajadas35.toFixed(2)}h</span>
         </div>
+=======
+
+        <div class="resumen-item resumen-item--extra25">
+          <span class="resumen-label">Horas Extras 25%</span>
+          <span class="resumen-value resumen-val--orange">${
+            resumen.extrasPool_25 > 0 ? fmtResumenHoras(resumen.extrasPool_25) : '00:00 = 0.00h'
+          }</span>
+          <span class="resumen-note">Brutas, sin descontar déficit</span>
+        </div>
+
+        <div class="resumen-item resumen-item--extra35">
+          <span class="resumen-label">Horas Extras 35%</span>
+          <span class="resumen-value resumen-val--orange">${
+            resumen.extrasPool_35 > 0 ? fmtResumenHoras(resumen.extrasPool_35) : '00:00 = 0.00h'
+          }</span>
+          <span class="resumen-note">Brutas, sin descontar déficit</span>
+        </div>
+
+        <div class="resumen-item resumen-item--debe">
+          <span class="resumen-label">Horas Debe</span>
+          <span class="resumen-value resumen-val--danger">${
+            resumen.horasDebe > 0 ? fmtResumenHoras(resumen.horasDebe) : '00:00 = 0.00h'
+          }</span>
+          <span class="resumen-note">Días con jornada incompleta</span>
+        </div>
+
+        <div class="resumen-item resumen-item--diasdebe">
+          <span class="resumen-label">Días Debe</span>
+          <span class="resumen-value resumen-val--danger resumen-val--small">${diasDebeDetalle}</span>
+          ${diasDebeHorasTotal > 0
+            ? `<span class="resumen-note resumen-note--total">Total: ${fmtResumenHoras(diasDebeHorasTotal)}</span>`
+            : ''}
+        </div>
+
+        <div class="resumen-item resumen-item--adescontar">
+          <span class="resumen-label">Horas a Descontar</span>
+          <span class="resumen-value resumen-val--danger">${fmtResumenHoras(resumen.horasADescontar)}</span>
+          <span class="resumen-note">Horas Debe + Días Debe</span>
+        </div>
+
+>>>>>>> 1b51e23 (changes in resumen)
       </div>
     </div>
   `;
