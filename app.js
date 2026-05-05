@@ -1159,6 +1159,31 @@ function imprimirBoleta() {
     .boleta-total .label { color: #5ab4e0 !important; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
     .boleta-total .value { font-family: 'Space Mono', monospace; font-size: 15pt; font-weight: 700; color: #fff !important; }
     .boleta-actions { display: none !important; }
+
+    /* ── RESUMEN ── */
+    .boleta-resumen { margin-top: 16px; padding-top: 14px; border-top: 1.5px solid #d0dce8; }
+    .boleta-resumen .boleta-section-title { color: #1e2d4a !important; border-bottom: 1px solid #d0dce8; margin-bottom: 10px; }
+    .resumen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0; }
+    .resumen-item {
+      background: #f0f4f8 !important; border: 1px solid #d0dce8; border-radius: 6px;
+      padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; text-align: left;
+    }
+    .resumen-item--extra25, .resumen-item--extra35 { border-color: #f47c51 !important; background: #fff3ee !important; }
+    .resumen-item--extra25 .resumen-label, .resumen-item--extra35 .resumen-label { color: #f47c51 !important; }
+    .resumen-item--debe, .resumen-item--diasdebe { border-color: #e74c3c !important; background: #fff0f0 !important; }
+    .resumen-item--adescontar { grid-column: 1 / -1; border-color: #e74c3c !important; background: #fff0f0 !important; }
+    .resumen-item--adescontar .resumen-label { color: #e74c3c !important; }
+    .resumen-label { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b82a0; }
+    .resumen-value { font-family: 'Space Mono', monospace; font-size: 9pt; font-weight: 700; color: #1e2d4a; line-height: 1.4; }
+    .resumen-val--orange { color: #f47c51 !important; }
+    .resumen-val--danger { color: #e74c3c !important; }
+    .resumen-val--small  { font-size: 7.5pt; line-height: 1.7; }
+    .resumen-note { font-size: 6pt; color: #6b82a0; font-style: italic; margin-top: 1px; }
+    .resumen-note--total {
+      font-family: 'Space Mono', monospace; font-size: 6.5pt; font-style: normal;
+      font-weight: 700; color: #e74c3c !important; margin-top: 4px; padding-top: 3px;
+      border-top: 1px dashed #e74c3c;
+    }
   `;
 
   // Eliminar iframe previo si existe
