@@ -346,7 +346,8 @@ function obtenerTotalesAsistencia() {
 
   const filas = document.querySelectorAll('#tbodyDias tr[data-dia]');
 
-  let horasTrabajadas  = 0;  // horas reales con registro
+  let horasTrabajadas  = 0;  // horas brutas reales (incluyendo extras)
+  let horasBase        = 0;  // horas base por día, cap 8h/día (para sueldo proporcional)
   let extrasPool_25    = 0;  // h.e. al 25% disponibles antes de compensar
   let extrasPool_35    = 0;  // h.e. al 35% disponibles antes de compensar
   let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
@@ -371,6 +372,7 @@ function obtenerTotalesAsistencia() {
     // Día de descanso (00:00–08:00, 0 almuerzo) → 8h exactas
     if (esDescanso(entrada, salida, almuerzo)) {
       horasTrabajadas += HORAS_DIARIAS;
+      horasBase       += HORAS_DIARIAS;
       return;
     }
 
@@ -379,6 +381,8 @@ function obtenerTotalesAsistencia() {
     const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
 
     horasTrabajadas += horas;
+    // horasBase cuenta cada día como máximo 8h: las extras NO se suman aquí
+    horasBase += Math.min(horas, HORAS_DIARIAS);
 
     if (horas > HORAS_DIARIAS) {
       // Extras del día — corte diario: primeras 2h → 25%, resto → 35%
@@ -406,19 +410,17 @@ function obtenerTotalesAsistencia() {
   // Redondear a 4 decimales para evitar falsos déficits por punto flotante
   let horasNoCubiertas = Math.round(deficitRestante * 10000) / 10000;
 
-  // ── CORRECCIÓN: si el total de horas trabajadas supera horasRegla,
-  // el mes está completamente cubierto. El exceso global son horas extras
-  // aunque el pool por-día no haya alcanzado a cubrir el déficit contable.
-  // Reclasificamos ese exceso como extras netas.
+  // ── CORRECCIÓN: si las horas base (cap 8h/día) cubren horasRegla,
+  // el mes está completamente cubierto aunque haya déficit contable por día.
+  // Reclasificamos ese caso como sin déficit y las extras netas se pagan.
   let totalExtras_25;
   let totalExtras_35;
 
-  if (horasNoCubiertas > 0 && horasTrabajadas >= horasRegla) {
-    // El total trabajado cubre el mes — el déficit fue cubierto implícitamente.
-    // El exceso global sobre horasRegla son extras netas a pagar.
-    const excesoGlobal = Math.round((horasTrabajadas - horasRegla) * 10000) / 10000;
-    totalExtras_25   = Math.min(excesoGlobal, extrasPool_25 + usado_25);
-    totalExtras_35   = Math.max(0, excesoGlobal - totalExtras_25);
+  if (horasNoCubiertas > 0 && horasBase >= horasRegla) {
+    // Las horas base alcanzan → el déficit fue cubierto implícitamente.
+    // Extras netas = las que sobran del pool tras compensar.
+    totalExtras_25   = extrasPool_25;
+    totalExtras_35   = extrasPool_35;
     horasNoCubiertas = 0;
   } else {
     // Caso normal: extras netas son las que sobran tras compensar
@@ -428,16 +430,19 @@ function obtenerTotalesAsistencia() {
 
   const totalExtras = totalExtras_25 + totalExtras_35;
 
-  // Horas efectivas para el desglose de sueldo proporcional (Regla 3).
+  // Horas efectivas para el sueldo proporcional (Regla 3).
+  // Se usa horasBase (máx. 8h/día) + horas extras usadas para compensar déficit.
+  // Así las extras no se cuentan doble: se suman solo en la parte de compensación.
   // Cuando no hay déficit residual se fija en horasRegla.
   const horasEfectivas = horasNoCubiertas > 0
-    ? Math.min(horasTrabajadas, horasRegla) + (usado_35 + usado_25)
+    ? Math.min(horasBase, horasRegla) + (usado_35 + usado_25)
     : horasRegla;
 
   return {
     diasRealesMes,
     horasRegla,
     horasTrabajadas,
+    horasBase,
     horasEfectivas,
     totalExtras,
     totalExtras_25,
