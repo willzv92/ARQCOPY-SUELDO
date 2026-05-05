@@ -642,8 +642,6 @@ function actualizarTotalDescuentos() {
 }
 
 /* ============================================================
-<<<<<<< HEAD
-=======
    HELPERS DE FORMATO PARA EL RESUMEN
    ============================================================ */
 // Convierte horas decimales → "hh:mm = h.hh"
@@ -657,69 +655,10 @@ function fmtResumenHoras(hDecimal) {
 }
 
 /* ============================================================
->>>>>>> 1b51e23 (changes in resumen)
    OBTENER RESUMEN DEL EMPLEADO (Días trabajados, faltados, horas)
    ============================================================ */
 function obtenerResumenEmpleado() {
   const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
-<<<<<<< HEAD
-  const filas = document.querySelectorAll('#tbodyDias tr[data-dia]');
-  
-  let diasTrabajados = 0;
-  let diasFalta = 0;
-  
-  filas.forEach(fila => {
-    const dia = parseInt(fila.dataset.dia);
-    const noLaborado = fila.classList.contains('no-laborado');
-    const esFinde = fila.classList.contains('weekend');
-    
-    // No contar días antes del inicio laboral
-    if (noLaborado) return;
-    
-    // Para fines de semana: no contar como falta
-    if (esFinde) return;
-    
-    // Obtener la celda que contiene las horas trabajadas
-    const horasTrabEl = fila.querySelector(`td:nth-child(5)`); // Columna "Horas Trab."
-    
-    if (!horasTrabEl) return;
-    
-    const contenidoHoras = horasTrabEl.textContent.trim();
-    
-    // Si contiene un badge "No laboró" o está vacío
-    if (contenidoHoras.includes('No laboró') || contenidoHoras === '—' || !contenidoHoras) {
-      diasFalta++;
-    } else {
-      // Intentar parsear como número
-      const horas = parseFloat(contenidoHoras);
-      if (!isNaN(horas) && horas > 0) {
-        diasTrabajados++;
-      } else {
-        diasFalta++;
-      }
-    }
-  });
-  
-  // Obtener totales de horas SIN las que se usaron para compensar el déficit
-  // extrasPool_25 y extrasPool_35 son las horas extras NETAS disponibles después de compensación
-  const mes           = parseInt(document.getElementById('mes').value);
-  const anio          = parseInt(document.getElementById('anio').value);
-  const diasRealesMes = getDiasEnMes(mes, anio);
-  const diasLaborales = diasRealesMes - (diaInicio - 1);
-  const horasRegla    = diasLaborales * HORAS_DIARIAS;
-
-  const filasDatos = document.querySelectorAll('#tbodyDias tr[data-dia]');
-  let extrasPool_25    = 0;  // h.e. al 25% disponibles ANTES de compensar
-  let extrasPool_35    = 0;  // h.e. al 35% disponibles ANTES de compensar
-  let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
-
-  filasDatos.forEach(fila => {
-    const d = parseInt(fila.dataset.dia);
-    if (!d) return;
-
-    // Días previos al inicio laboral → no generan déficit ni horas
-    if (d < diaInicio) return;
-=======
   const mes       = parseInt(document.getElementById('mes').value);
   const anio      = parseInt(document.getElementById('anio').value);
   const filas     = document.querySelectorAll('#tbodyDias tr[data-dia]');
@@ -737,24 +676,11 @@ function obtenerResumenEmpleado() {
 
     // Ignorar días previos al inicio laboral y fines de semana
     if (noLaborado || esFinde || !d) return;
->>>>>>> 1b51e23 (changes in resumen)
 
     const entrada  = document.getElementById(`entrada_${d}`)?.value;
     const salida   = document.getElementById(`salida_${d}`)?.value;
     const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
 
-<<<<<<< HEAD
-    // Día sin registro válido → falta completa → 8h de déficit
-    if (!entrada || !salida || entrada >= salida) {
-      deficitBruto += HORAS_DIARIAS;
-      return;
-    }
-
-    // Día de descanso (00:00–08:00, 0 almuerzo) → 8h exactas
-    if (esDescanso(entrada, salida, almuerzo)) {
-      return;
-    }
-=======
     // Día sin registro válido → falta total → va a diasDebe
     if (!entrada || !salida || entrada >= salida) {
       const fecha    = new Date(anio, mes, d);
@@ -765,50 +691,17 @@ function obtenerResumenEmpleado() {
 
     // Día de descanso → 8h exactas, sin extras ni déficit
     if (esDescanso(entrada, salida, almuerzo)) return;
->>>>>>> 1b51e23 (changes in resumen)
 
     const [eh, em] = entrada.split(':').map(Number);
     const [sh, sm] = salida.split(':').map(Number);
     const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
 
     if (horas > HORAS_DIARIAS) {
-<<<<<<< HEAD
-      // Extras del día — corte diario: primeras 2h → 25%, resto → 35%
-=======
       // Extras brutas del día: primeras 2h → 25%, resto → 35%
->>>>>>> 1b51e23 (changes in resumen)
       const extras = horas - HORAS_DIARIAS;
       extrasPool_25 += Math.min(extras, 2);
       extrasPool_35 += Math.max(0, extras - 2);
     } else if (horas < HORAS_DIARIAS) {
-<<<<<<< HEAD
-      deficitBruto += (HORAS_DIARIAS - horas);
-    }
-  });
-
-  // ── COMPENSACIÓN:
-  // Las extras cubren el déficit. Orden: tramo 35% primero (más caro),
-  // luego tramo 25%. Las horas extras usadas NO se pagan.
-  let deficitRestante = deficitBruto;
-
-  const usado_35 = Math.min(deficitRestante, extrasPool_35);
-  extrasPool_35   -= usado_35;
-  deficitRestante -= usado_35;
-
-  const usado_25 = Math.min(deficitRestante, extrasPool_25);
-  extrasPool_25   -= usado_25;
-  deficitRestante -= usado_25;
-
-  // Horas extras NETAS después de compensación
-  const totalExtras_25_Netas = extrasPool_25;
-  const totalExtras_35_Netas = extrasPool_35;
-  
-  return {
-    diasTrabajados,
-    diasFalta,
-    horasTrabajadas25: totalExtras_25_Netas,
-    horasTrabajadas35: totalExtras_35_Netas
-=======
       // Déficit parcial del día → va a horasDebe
       horasDebe += (HORAS_DIARIAS - horas);
     }
@@ -824,7 +717,6 @@ function obtenerResumenEmpleado() {
     horasDebe,               // horas parciales incompletas
     diasDebeList,            // días con falta total
     horasADescontar,         // total a descontar
->>>>>>> 1b51e23 (changes in resumen)
   };
 }
 
@@ -931,9 +823,6 @@ function calcularYMostrar() {
   
   // Obtener resumen del empleado
   const resumen = obtenerResumenEmpleado();
-<<<<<<< HEAD
-  console.log('Resumen obtenido:', resumen);
-=======
 
   // ── Ítem: Días Debe (lista detallada de días con falta total)
   const diasDebeDetalle = resumen.diasDebeList.length > 0
@@ -946,7 +835,6 @@ function calcularYMostrar() {
     : '—';
 
   const diasDebeHorasTotal = resumen.diasDebeList.reduce((s, d) => s + d.horas, 0);
->>>>>>> 1b51e23 (changes in resumen)
 
   // Construir HTML de resumen
   const resumenHTML = `
@@ -954,28 +842,6 @@ function calcularYMostrar() {
     <div class="boleta-resumen">
       <div class="boleta-section-title">📊 Resumen</div>
       <div class="resumen-grid">
-<<<<<<< HEAD
-        <div class="resumen-item">
-          <span class="resumen-label">Días trabajados</span>
-          <span class="resumen-value">${resumen.diasTrabajados}</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Días que faltó</span>
-          <span class="resumen-value">${resumen.diasFalta}</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Horas Trabajadas</span>
-          <span class="resumen-value">${horasEfectivas.toFixed(2)}h</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Horas extras 25%</span>
-          <span class="resumen-value">${resumen.horasTrabajadas25.toFixed(2)}h</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Horas extras 35%</span>
-          <span class="resumen-value">${resumen.horasTrabajadas35.toFixed(2)}h</span>
-        </div>
-=======
 
         <div class="resumen-item resumen-item--extra25">
           <span class="resumen-label">Horas Extras 25%</span>
@@ -1015,7 +881,6 @@ function calcularYMostrar() {
           <span class="resumen-note">Horas Debe + Días Debe</span>
         </div>
 
->>>>>>> 1b51e23 (changes in resumen)
       </div>
     </div>
   `;

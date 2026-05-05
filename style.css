@@ -949,22 +949,14 @@ input[type="time"]:focus,
   margin-bottom: 16px;
 }
 
-<<<<<<< HEAD
-.resumen-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-=======
 /* Grid: 2 cols para extras, luego 3 cols para los debe */
 .resumen-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
->>>>>>> 1b51e23 (changes in resumen)
   gap: 12px;
   margin-bottom: 16px;
 }
 
-<<<<<<< HEAD
-=======
 /* Horas Extras 25% y 35% → primera fila (2 columnas) */
 .resumen-item--extra25,
 .resumen-item--extra35 {
@@ -982,26 +974,10 @@ input[type="time"]:focus,
   grid-column: 1 / -1; /* ocupa toda la fila */
 }
 
->>>>>>> 1b51e23 (changes in resumen)
 .resumen-item {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-<<<<<<< HEAD
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: center;
-}
-
-.resumen-label {
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-=======
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -1015,16 +991,10 @@ input[type="time"]:focus,
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
->>>>>>> 1b51e23 (changes in resumen)
 }
 
 .resumen-value {
   font-family: 'Space Mono', monospace;
-<<<<<<< HEAD
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--sky);
-=======
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--sky);
@@ -1078,7 +1048,6 @@ input[type="time"]:focus,
 .resumen-item--extra25 .resumen-label,
 .resumen-item--extra35 .resumen-label {
   color: var(--orange);
->>>>>>> 1b51e23 (changes in resumen)
 }
 
 .boleta-actions {
