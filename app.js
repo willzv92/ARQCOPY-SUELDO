@@ -656,6 +656,8 @@ function fmtResumenHoras(hDecimal) {
 
 /* ============================================================
    OBTENER RESUMEN DEL EMPLEADO (Días trabajados, faltados, horas)
+   Usa EXACTAMENTE la misma lógica que obtenerTotalesAsistencia
+   para garantizar que los números sean consistentes.
    ============================================================ */
 function obtenerResumenEmpleado() {
   const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
@@ -663,28 +665,27 @@ function obtenerResumenEmpleado() {
   const anio      = parseInt(document.getElementById('anio').value);
   const filas     = document.querySelectorAll('#tbodyDias tr[data-dia]');
 
-  // Acumuladores
+  // Acumuladores — misma lógica que obtenerTotalesAsistencia
   let extrasPool_25  = 0;   // h.e. brutas al 25% (antes de compensación)
   let extrasPool_35  = 0;   // h.e. brutas al 35% (antes de compensación)
-  let horasDebe      = 0;   // déficit de días con horas pero incompletas
-  let diasDebeList   = [];  // días con falta total: [{dia, nombre, horas}]
+  let horasDebe      = 0;   // déficit de días con registro parcial (< 8h)
+  let diasDebeList   = [];  // días sin ningún registro válido
 
   filas.forEach(fila => {
-    const d          = parseInt(fila.dataset.dia);
-    const noLaborado = fila.classList.contains('no-laborado');
-    const esFinde    = fila.classList.contains('weekend');
+    const d = parseInt(fila.dataset.dia);
+    if (!d) return;
 
-    // Ignorar días previos al inicio laboral y fines de semana
-    if (noLaborado || esFinde || !d) return;
+    // Días previos al inicio laboral → se ignoran (igual que obtenerTotalesAsistencia)
+    if (d < diaInicio) return;
 
     const entrada  = document.getElementById(`entrada_${d}`)?.value;
     const salida   = document.getElementById(`salida_${d}`)?.value;
     const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
 
-    // Día sin registro válido → falta total → va a diasDebe
+    // Sin registro válido → falta total (igual que obtenerTotalesAsistencia: +8h déficit)
     if (!entrada || !salida || entrada >= salida) {
-      const fecha    = new Date(anio, mes, d);
-      const nombreD  = DIAS_SEMANA[fecha.getDay()];
+      const fecha   = new Date(anio, mes, d);
+      const nombreD = DIAS_SEMANA[fecha.getDay()];
       diasDebeList.push({ dia: d, nombre: nombreD, horas: HORAS_DIARIAS });
       return;
     }
@@ -702,21 +703,21 @@ function obtenerResumenEmpleado() {
       extrasPool_25 += Math.min(extras, 2);
       extrasPool_35 += Math.max(0, extras - 2);
     } else if (horas < HORAS_DIARIAS) {
-      // Déficit parcial del día → va a horasDebe
+      // Déficit parcial → horasDebe (jornada incompleta)
       horasDebe += (HORAS_DIARIAS - horas);
     }
   });
 
-  // Horas a descontar = horasDebe (parciales) + horas de días completos faltados
+  // Horas a descontar = déficit parcial + días completos sin registro
   const horasDiasDebe   = diasDebeList.reduce((s, d) => s + d.horas, 0);
   const horasADescontar = Math.round((horasDebe + horasDiasDebe) * 10000) / 10000;
 
   return {
-    extrasPool_25,           // brutas al 25% (sin quitar déficit)
-    extrasPool_35,           // brutas al 35% (sin quitar déficit)
-    horasDebe,               // horas parciales incompletas
-    diasDebeList,            // días con falta total
-    horasADescontar,         // total a descontar
+    extrasPool_25,    // brutas al 25% sin descontar déficit
+    extrasPool_35,    // brutas al 35% sin descontar déficit
+    horasDebe,        // horas faltantes en días con registro parcial
+    diasDebeList,     // días sin registro (incluyendo fines de semana sin marcar)
+    horasADescontar,  // total a descontar
   };
 }
 
