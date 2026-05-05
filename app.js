@@ -837,52 +837,58 @@ function calcularYMostrar() {
 
   const diasDebeHorasTotal = resumen.diasDebeList.reduce((s, d) => s + d.horas, 0);
 
-  // Construir HTML de resumen
+  // Helper para generar una tarjeta del resumen (funciona en pantalla Y en PDF con tabla)
+  function tarjetaResumen(clases, labelColor, label, valueColor, value, note, noteFinal) {
+    return `<div class="resumen-item ${clases}" style="border-radius:6px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;border:1.5px solid ${labelColor};background:${clases.includes('extra')?'#fff3ee':'#fff0f0'};">
+      <span class="resumen-label" style="font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${labelColor};display:block;">${label}</span>
+      <span class="resumen-value" style="font-family:'Space Mono',monospace;font-size:8.5pt;font-weight:700;color:${valueColor};line-height:1.5;display:block;">${value}</span>
+      <span class="resumen-note" style="font-size:5.5pt;color:#6b82a0;font-style:italic;display:block;">${note}</span>
+      ${noteFinal ? `<span style="font-family:'Space Mono',monospace;font-size:6pt;font-weight:700;color:#e74c3c;margin-top:3px;padding-top:3px;border-top:1px dashed #e74c3c;display:block;">${noteFinal}</span>` : ''}
+    </div>`;
+  }
+
+  // Construir HTML de resumen — usa tabla para máxima compatibilidad en PDF
   const resumenHTML = `
     <!-- RESUMEN DEL EMPLEADO -->
-    <div class="boleta-resumen">
-      <div class="boleta-section-title">📊 Resumen</div>
-      <div class="resumen-grid">
+    <div class="boleta-resumen" style="margin-top:16px;padding-top:14px;border-top:1.5px solid #d0dce8;">
+      <div class="boleta-section-title" style="font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#1e2d4a;border-bottom:1px solid #d0dce8;padding-bottom:4px;margin-bottom:10px;">📊 Resumen</div>
 
-        <div class="resumen-item resumen-item--extra25">
-          <span class="resumen-label">Horas Extras 25%</span>
-          <span class="resumen-value resumen-val--orange">${
-            resumen.extrasPool_25 > 0 ? fmtResumenHoras(resumen.extrasPool_25) : '00:00 = 0.00h'
-          }</span>
-          <span class="resumen-note">Brutas, sin descontar déficit</span>
-        </div>
-
-        <div class="resumen-item resumen-item--extra35">
-          <span class="resumen-label">Horas Extras 35%</span>
-          <span class="resumen-value resumen-val--orange">${
-            resumen.extrasPool_35 > 0 ? fmtResumenHoras(resumen.extrasPool_35) : '00:00 = 0.00h'
-          }</span>
-          <span class="resumen-note">Brutas, sin descontar déficit</span>
-        </div>
-
-        <div class="resumen-item resumen-item--debe">
-          <span class="resumen-label">Horas Debe</span>
-          <span class="resumen-value resumen-val--danger">${
-            resumen.horasDebe > 0 ? fmtResumenHoras(resumen.horasDebe) : '00:00 = 0.00h'
-          }</span>
-          <span class="resumen-note">Días con jornada incompleta</span>
-        </div>
-
-        <div class="resumen-item resumen-item--diasdebe">
-          <span class="resumen-label">Días Debe</span>
-          <span class="resumen-value resumen-val--danger resumen-val--small">${diasDebeDetalle}</span>
-          ${diasDebeHorasTotal > 0
-            ? `<span class="resumen-note resumen-note--total">Total: ${fmtResumenHoras(diasDebeHorasTotal)}</span>`
-            : ''}
-        </div>
-
-        <div class="resumen-item resumen-item--adescontar">
-          <span class="resumen-label">Horas a Descontar</span>
-          <span class="resumen-value resumen-val--danger">${fmtResumenHoras(resumen.horasADescontar)}</span>
-          <span class="resumen-note">Horas Debe + Días Debe</span>
-        </div>
-
-      </div>
+      <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:6px 6px;">
+        <tr>
+          <td width="50%" style="vertical-align:top;padding:0;">
+            ${tarjetaResumen('resumen-item--extra25','#f47c51','Horas Extras 25%','#f47c51',
+              resumen.extrasPool_25 > 0 ? fmtResumenHoras(resumen.extrasPool_25) : '00:00 = 0.00h',
+              'Brutas, sin descontar déficit', '')}
+          </td>
+          <td width="50%" style="vertical-align:top;padding:0;">
+            ${tarjetaResumen('resumen-item--extra35','#f47c51','Horas Extras 35%','#f47c51',
+              resumen.extrasPool_35 > 0 ? fmtResumenHoras(resumen.extrasPool_35) : '00:00 = 0.00h',
+              'Brutas, sin descontar déficit', '')}
+          </td>
+        </tr>
+        <tr>
+          <td width="50%" style="vertical-align:top;padding:0;">
+            ${tarjetaResumen('resumen-item--debe','#e74c3c','Horas Debe','#e74c3c',
+              resumen.horasDebe > 0 ? fmtResumenHoras(resumen.horasDebe) : '00:00 = 0.00h',
+              'Días con jornada incompleta', '')}
+          </td>
+          <td width="50%" style="vertical-align:top;padding:0;">
+            ${tarjetaResumen('resumen-item--diasdebe','#e74c3c','Días Debe','#e74c3c',
+              diasDebeDetalle,
+              '',
+              diasDebeHorasTotal > 0 ? 'Total: ' + fmtResumenHoras(diasDebeHorasTotal) : '')}
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="vertical-align:top;padding:0;">
+            <div class="resumen-item resumen-item--adescontar" style="border-radius:6px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;border:1.5px solid #e74c3c;background:#fff0f0;">
+              <span class="resumen-label" style="font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#e74c3c;display:block;">Horas a Descontar</span>
+              <span class="resumen-value" style="font-family:'Space Mono',monospace;font-size:8.5pt;font-weight:700;color:#e74c3c;line-height:1.5;display:block;">${fmtResumenHoras(resumen.horasADescontar)}</span>
+              <span class="resumen-note" style="font-size:5.5pt;color:#6b82a0;font-style:italic;display:block;">Horas Debe + Días Debe</span>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
   `;
 
@@ -1161,28 +1167,99 @@ function imprimirBoleta() {
     .boleta-actions { display: none !important; }
 
     /* ── RESUMEN ── */
-    .boleta-resumen { margin-top: 16px; padding-top: 14px; border-top: 1.5px solid #d0dce8; }
-    .boleta-resumen .boleta-section-title { color: #1e2d4a !important; border-bottom: 1px solid #d0dce8; margin-bottom: 10px; }
-    .resumen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0; }
-    .resumen-item {
-      background: #f0f4f8 !important; border: 1px solid #d0dce8; border-radius: 6px;
-      padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; text-align: left;
+    .boleta-resumen {
+      margin-top: 16px !important;
+      padding-top: 14px !important;
+      border-top: 1.5px solid #d0dce8 !important;
+      display: block !important;
     }
-    .resumen-item--extra25, .resumen-item--extra35 { border-color: #f47c51 !important; background: #fff3ee !important; }
-    .resumen-item--extra25 .resumen-label, .resumen-item--extra35 .resumen-label { color: #f47c51 !important; }
-    .resumen-item--debe, .resumen-item--diasdebe { border-color: #e74c3c !important; background: #fff0f0 !important; }
-    .resumen-item--adescontar { grid-column: 1 / -1; border-color: #e74c3c !important; background: #fff0f0 !important; }
-    .resumen-item--adescontar .resumen-label { color: #e74c3c !important; }
-    .resumen-label { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b82a0; }
-    .resumen-value { font-family: 'Space Mono', monospace; font-size: 9pt; font-weight: 700; color: #1e2d4a; line-height: 1.4; }
+    .boleta-resumen .boleta-section-title {
+      display: block !important;
+      color: #1e2d4a !important;
+      border-bottom: 1px solid #d0dce8 !important;
+      margin-bottom: 10px !important;
+      padding-bottom: 4px !important;
+      font-size: 6.5pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.12em !important;
+    }
+    .resumen-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 7px !important;
+      width: 100% !important;
+    }
+    .resumen-item {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 3px !important;
+      padding: 8px 10px !important;
+      border-radius: 5px !important;
+      border: 1px solid #d0dce8 !important;
+      background: #f0f4f8 !important;
+      text-align: left !important;
+      break-inside: avoid !important;
+    }
+    .resumen-item--extra25,
+    .resumen-item--extra35 {
+      border-color: #f47c51 !important;
+      background: #fff3ee !important;
+    }
+    .resumen-item--extra25 .resumen-label,
+    .resumen-item--extra35 .resumen-label {
+      color: #f47c51 !important;
+    }
+    .resumen-item--debe,
+    .resumen-item--diasdebe {
+      border-color: #e74c3c !important;
+      background: #fff0f0 !important;
+    }
+    .resumen-item--adescontar {
+      grid-column: 1 / -1 !important;
+      border-color: #e74c3c !important;
+      background: #fff0f0 !important;
+    }
+    .resumen-item--adescontar .resumen-label {
+      color: #e74c3c !important;
+    }
+    .resumen-label {
+      display: block !important;
+      font-size: 5.5pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+      color: #6b82a0 !important;
+      margin-bottom: 1px !important;
+    }
+    .resumen-value {
+      display: block !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 8.5pt !important;
+      font-weight: 700 !important;
+      color: #1e2d4a !important;
+      line-height: 1.4 !important;
+    }
     .resumen-val--orange { color: #f47c51 !important; }
     .resumen-val--danger { color: #e74c3c !important; }
-    .resumen-val--small  { font-size: 7.5pt; line-height: 1.7; }
-    .resumen-note { font-size: 6pt; color: #6b82a0; font-style: italic; margin-top: 1px; }
+    .resumen-val--small  { font-size: 7pt !important; line-height: 1.7 !important; }
+    .resumen-note {
+      display: block !important;
+      font-size: 5.5pt !important;
+      color: #6b82a0 !important;
+      font-style: italic !important;
+      margin-top: 1px !important;
+    }
     .resumen-note--total {
-      font-family: 'Space Mono', monospace; font-size: 6.5pt; font-style: normal;
-      font-weight: 700; color: #e74c3c !important; margin-top: 4px; padding-top: 3px;
-      border-top: 1px dashed #e74c3c;
+      display: block !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 6pt !important;
+      font-style: normal !important;
+      font-weight: 700 !important;
+      color: #e74c3c !important;
+      margin-top: 4px !important;
+      padding-top: 3px !important;
+      border-top: 1px dashed #e74c3c !important;
     }
   `;
 
