@@ -182,17 +182,9 @@
           </span>
         </div>
 
-        <!-- EXPORTAR / IMPORTAR / GUARDAR AVANCE -->
+        <!-- EXPORTAR / IMPORTAR AVANCE -->
         <div class="save-toolbar">
           <div class="save-toolbar-left">
-            <button type="button" class="btn btn-save" onclick="guardarAvance()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2Z"/><path d="M12 3v5"/><path d="M9 6h6"/></svg>
-              Guardar Avance
-            </button>
-            <button type="button" class="btn btn-save" onclick="abrirModalCargar()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-              Cargar Avance
-            </button>
             <button type="button" class="btn btn-save" onclick="exportarAvance()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Exportar Avance
@@ -264,16 +256,6 @@
   <footer class="site-footer">
     <span>Arq-Copy &copy; 2026 — Sistema de Planilla | Ley Peruana Vigente</span>
   </footer>
-
-  <div class="modal-overlay" id="modalCargar" onclick="cerrarModalCargar(event)">
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalCargarTitle">
-      <div class="modal-header">
-        <h2 id="modalCargarTitle">Avances guardados</h2>
-        <button type="button" class="modal-close" onclick="cerrarModalCargar()" aria-label="Cerrar">×</button>
-      </div>
-      <div class="modal-content" id="listaAvances"></div>
-    </div>
-  </div>
 
   <script src="app.js?v=1777955771"></script>
 </body>
