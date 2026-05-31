@@ -844,7 +844,7 @@ function calcularYMostrar() {
 
   // Helper para generar una tarjeta del resumen (funciona en pantalla Y en PDF con tabla)
   function tarjetaResumen(clases, labelColor, label, valueColor, value, note, noteFinal) {
-    return `<div class="resumen-item ${clases}" style="border-radius:6px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;border:1.5px solid ${labelColor};background:${clases.includes('extra')?'#fff3ee':'#fff0f0'};">
+    return `<div class="resumen-item ${clases}" style="border-radius:6px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;border:1.5px solid ${labelColor};background:#fff0f0;">
       <span class="resumen-label" style="font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${labelColor};display:block;">${label}</span>
       <span class="resumen-value" style="font-family:'Space Mono',monospace;font-size:8.5pt;font-weight:700;color:${valueColor};line-height:1.5;display:block;">${value}</span>
       <span class="resumen-note" style="font-size:5.5pt;color:#6b82a0;font-style:italic;display:block;">${note}</span>
@@ -861,12 +861,12 @@ function calcularYMostrar() {
       <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:6px 6px;">
         <tr>
           <td width="50%" style="vertical-align:top;padding:0;">
-            ${tarjetaResumen('resumen-item--extra25','#f47c51','Horas Extras 25%','#f47c51',
+            ${tarjetaResumen('resumen-item--extra25','#e74c3c','Horas Extras 25%','#e74c3c',
               resumen.extrasPool_25 > 0 ? fmtResumenHoras(resumen.extrasPool_25) : '00:00 = 0.00h',
               'Brutas, sin descontar déficit', '')}
           </td>
           <td width="50%" style="vertical-align:top;padding:0;">
-            ${tarjetaResumen('resumen-item--extra35','#f47c51','Horas Extras 35%','#f47c51',
+            ${tarjetaResumen('resumen-item--extra35','#e74c3c','Horas Extras 35%','#e74c3c',
               resumen.extrasPool_35 > 0 ? fmtResumenHoras(resumen.extrasPool_35) : '00:00 = 0.00h',
               'Brutas, sin descontar déficit', '')}
           </td>
@@ -886,9 +886,9 @@ function calcularYMostrar() {
         </tr>
         <tr>
           <td colspan="2" style="vertical-align:top;padding:0;">
-            <div class="resumen-item resumen-item--adescontar" style="border-radius:6px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;border:1.5px solid #e74c3c;background:#fff0f0;">
-              <span class="resumen-label" style="font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#e74c3c;display:block;">Horas a Descontar</span>
-              <span class="resumen-value" style="font-family:'Space Mono',monospace;font-size:8.5pt;font-weight:700;color:#e74c3c;line-height:1.5;display:block;">${fmtResumenHoras(resumen.horasADescontar)}</span>
+            <div class="resumen-item resumen-item--adescontar" style="border-radius:6px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;border:1.5px solid #27ae60;background:#eafaf1;">
+              <span class="resumen-label" style="font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#27ae60;display:block;">Horas a Descontar</span>
+              <span class="resumen-value" style="font-family:'Space Mono',monospace;font-size:8.5pt;font-weight:700;color:#27ae60;line-height:1.5;display:block;">${fmtResumenHoras(resumen.horasADescontar)}</span>
               <span class="resumen-note" style="font-size:5.5pt;color:#6b82a0;font-style:italic;display:block;">Horas Debe + Días Debe</span>
             </div>
           </td>
