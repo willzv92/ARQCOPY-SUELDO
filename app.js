@@ -408,27 +408,16 @@ function obtenerTotalesAsistencia() {
   deficitRestante -= usado_25;
 
   // Redondear a 4 decimales para evitar falsos déficits por punto flotante
-  let horasNoCubiertas = Math.round(deficitRestante * 10000) / 10000;
+  const horasNoCubiertas = Math.round(deficitRestante * 10000) / 10000;
 
-  // ── CORRECCIÓN: si las horas base (cap 8h/día) cubren horasRegla,
-  // el mes está completamente cubierto aunque haya déficit contable por día.
-  // Reclasificamos ese caso como sin déficit y las extras netas se pagan.
-  let totalExtras_25;
-  let totalExtras_35;
-
-  if (horasNoCubiertas > 0 && horasBase >= horasRegla) {
-    // Las horas base alcanzan → el déficit fue cubierto implícitamente.
-    // Extras netas = las que sobran del pool tras compensar.
-    totalExtras_25   = extrasPool_25;
-    totalExtras_35   = extrasPool_35;
-    horasNoCubiertas = 0;
-  } else {
-    // Caso normal: extras netas son las que sobran tras compensar
-    totalExtras_25 = extrasPool_25;
-    totalExtras_35 = extrasPool_35;
-  }
-
-  const totalExtras = totalExtras_25 + totalExtras_35;
+  // Extras netas: las que sobran del pool tras compensar el déficit.
+  // INVARIANTE: por construcción horasBase + deficitBruto === horasRegla
+  // (cada día aporta exactamente HORAS_DIARIAS a uno de los dos acumuladores).
+  // Por eso "horasBase >= horasRegla" obliga a déficit nulo y la rama de
+  // reclasificación que existía aquí era inalcanzable: se eliminó.
+  const totalExtras_25 = extrasPool_25;
+  const totalExtras_35 = extrasPool_35;
+  const totalExtras    = totalExtras_25 + totalExtras_35;
 
   // Horas efectivas para el sueldo proporcional (Regla 3).
   // Se usa horasBase (máx. 8h/día) + horas extras usadas para compensar déficit.
@@ -774,14 +763,14 @@ function calcularYMostrar() {
   if (s.extras_25 > 0) {
     rowsExtras += `
       <div class="boleta-row">
-        <span class="label">H. Extras al 25% (${fmtHrs(s.extras_25)} × ${fmtSol(s.valorHora * 1.25)})</span>
+        <span class="label">H. Extras al 25% (${fmtHrs(s.extras_25)} × ${fmtSol(s.valorHora * (1 + TASA_EXTRA_25))})</span>
         <span class="value extra">+ ${fmtSol(s.extras_25 * s.valorHora * (1 + TASA_EXTRA_25))}</span>
       </div>`;
   }
   if (s.extras_35 > 0) {
     rowsExtras += `
       <div class="boleta-row">
-        <span class="label">H. Extras al 35% (${fmtHrs(s.extras_35)} × ${fmtSol(s.valorHora * 1.35)})</span>
+        <span class="label">H. Extras al 35% (${fmtHrs(s.extras_35)} × ${fmtSol(s.valorHora * (1 + TASA_EXTRA_35))})</span>
         <span class="value extra">+ ${fmtSol(s.extras_35 * s.valorHora * (1 + TASA_EXTRA_35))}</span>
       </div>`;
   }
