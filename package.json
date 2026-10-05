@@ -1,0 +1,14 @@
+{
+  "name": "arqcopy-sueldo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arq-Copy — Planilla de Sueldos (Perú). App estática sin build step.",
+  "scripts": {
+    "golden:capture": "node tests/harness/golden.js --capture",
+    "golden:verify": "node tests/harness/golden.js --verify",
+    "test": "node tests/harness/golden.js --verify"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}
