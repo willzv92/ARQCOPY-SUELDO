@@ -81,14 +81,31 @@ function fmtHrs(h) {
 }
 
 /* ============================================================
+   ESTADO DEL FORMULARIO
+   Único punto de lectura de los inputs de cabecera. Toda la
+   lógica de cálculo consume este objeto en lugar de volver a
+   preguntarle al DOM campo por campo.
+   ============================================================ */
+function readState() {
+  const el = (id) => document.getElementById(id);
+  return {
+    nombre:        el('nombreEmpleado').value.trim(),
+    mes:           parseInt(el('mes').value),
+    anio:          parseInt(el('anio').value),
+    seguro:        el('seguro').value,
+    diaInicio:     Math.max(1, parseInt(el('diaInicio')?.value) || 1),
+    diaActivacion: parseInt(el('diaActivacion')?.value) || 1,
+  };
+}
+
+/* ============================================================
    INFO DE SEGURO SOCIAL
    ============================================================ */
 function actualizarInfoSeguro() {
-  const tipo        = document.getElementById('seguro').value;
+  const { seguro: tipo, diaActivacion: dia } = readState();
   const banner      = document.getElementById('seguroInfo');
   const texto       = document.getElementById('seguroInfoText');
   const grupodia    = document.getElementById('grupoDiaActivacion');
-  const diaEl       = document.getElementById('diaActivacion');
 
   // Mostrar / ocultar campo de día de activación
   if (tipo !== 'ninguno') {
@@ -99,7 +116,6 @@ function actualizarInfoSeguro() {
     return;
   }
 
-  const dia   = parseInt(diaEl.value) || 1;
   const tasa  = tipo === 'afp' ? TASA_AFP : TASA_ONP;
   const label = tipo === 'afp' ? 'AFP (11.37%)' : 'ONP (13%)';
 
@@ -121,14 +137,11 @@ function actualizarInfoSeguro() {
    INFO DE DÍA DE INICIO LABORAL
    ============================================================ */
 function actualizarInfoDiaInicio() {
-  const mes     = parseInt(document.getElementById('mes').value);
-  const anio    = parseInt(document.getElementById('anio').value);
-  const diaEl   = document.getElementById('diaInicio');
+  const { mes, anio, diaInicio: dia } = readState();
   const banner  = document.getElementById('diaInicioInfo');
   const texto   = document.getElementById('diaInicioInfoText');
   if (!banner || !texto) return;
 
-  const dia  = Math.max(1, parseInt(diaEl?.value) || 1);
   const total = getDiasEnMes(mes, anio);
 
   if (dia <= 1) {
@@ -147,10 +160,8 @@ function actualizarInfoDiaInicio() {
 
 
 function generarDias() {
-  const mes       = parseInt(document.getElementById('mes').value);
-  const anio      = parseInt(document.getElementById('anio').value);
-  const total     = getDiasEnMes(mes, anio);
-  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
+  const { mes, anio, diaInicio } = readState();
+  const total = getDiasEnMes(mes, anio);
 
   // Mostrar secciones
   document.getElementById('stepAsistencia').style.display  = 'block';
@@ -337,10 +348,8 @@ function actualizarTotalesTabla() {
             reales / (díasMes × 8h).
    ============================================================ */
 function obtenerTotalesAsistencia() {
-  const mes           = parseInt(document.getElementById('mes').value);
-  const anio          = parseInt(document.getElementById('anio').value);
+  const { mes, anio, diaInicio } = readState();
   const diasRealesMes = getDiasEnMes(mes, anio);
-  const diaInicio     = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
   const diasLaborales = diasRealesMes - (diaInicio - 1);           // días que el empleado debía trabajar
   const horasRegla    = diasLaborales * HORAS_DIARIAS;             // horas "perfectas" del período
 
@@ -450,9 +459,10 @@ function obtenerTotalesAsistencia() {
    Seguro AFP/ONP: SIEMPRE sobre S/1,130 fijo.
    ============================================================ */
 function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas) {
-  const tipoSeguro  = document.getElementById('seguro').value;
-  const valorHora   = VALOR_HORA; // S/ 1,130 / 30 / 8
-  const diaInicioV  = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
+  const st             = readState();
+  const tipoSeguro     = st.seguro;
+  const valorHora      = VALOR_HORA; // S/ 1,130 / 30 / 8
+  const diaInicioV     = st.diaInicio;
 
   // Sueldo base máximo para el período (proporcional si empezó después del día 1)
   const diasLaboralesPeriodo = DIAS_MES_BASE - (diaInicioV - 1);
@@ -484,7 +494,7 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
 
   if (tipoSeguro === 'afp' || tipoSeguro === 'onp') {
     tasaSeguro    = tipoSeguro === 'afp' ? TASA_AFP : TASA_ONP;
-    diaActivacion = parseInt(document.getElementById('diaActivacion')?.value) || 1;
+    diaActivacion = st.diaActivacion;
 
     if (diaActivacion > 1) {
       // Proporcional: S/ 1,130 × (30 − (día − 1)) / 30
@@ -654,9 +664,7 @@ function fmtResumenHoras(hDecimal) {
    para garantizar que los números sean consistentes.
    ============================================================ */
 function obtenerResumenEmpleado() {
-  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
-  const mes       = parseInt(document.getElementById('mes').value);
-  const anio      = parseInt(document.getElementById('anio').value);
+  const { diaInicio, mes, anio } = readState();
   const filas     = document.querySelectorAll('#tbodyDias tr[data-dia]');
 
   // Acumuladores — misma lógica que obtenerTotalesAsistencia
@@ -719,9 +727,8 @@ function obtenerResumenEmpleado() {
    GENERAR BOLETA
    ============================================================ */
 function calcularYMostrar() {
-  const nombre = document.getElementById('nombreEmpleado').value.trim() || 'Empleado Sin Nombre';
-  const mes    = parseInt(document.getElementById('mes').value);
-  const anio   = parseInt(document.getElementById('anio').value);
+  const { nombre: nombreRaw, mes, anio, diaInicio: diaInicioV } = readState();
+  const nombre = nombreRaw || 'Empleado Sin Nombre';
 
   const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia();
   const s = calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas);
@@ -732,7 +739,6 @@ function calcularYMostrar() {
 
   // ── Regla 3: sueldo proporcional a horas (horasNoCubiertas > 0)
   // Muestra el desglose: horas efectivas / horas reglamentarias
-  const diaInicioV = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
   const diasLaboralesPeriodo = DIAS_MES_BASE - (diaInicioV - 1);
   const sueldoBaseMaximo     = SUELDO_BASE * (diasLaboralesPeriodo / DIAS_MES_BASE);
 
@@ -966,10 +972,8 @@ function calcularYMostrar() {
    LLENAR EJEMPLO
    ============================================================ */
 function llenarEjemplo() {
-  const mes       = parseInt(document.getElementById('mes').value);
-  const anio      = parseInt(document.getElementById('anio').value);
-  const total     = getDiasEnMes(mes, anio);
-  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
+  const { mes, anio, diaInicio } = readState();
+  const total = getDiasEnMes(mes, anio);
 
   // Horarios variados para días laborales
   const salidaOpciones = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30'];
@@ -996,7 +1000,7 @@ function llenarEjemplo() {
     calcularFila(d);
   }
 
-  if (!document.getElementById('nombreEmpleado').value.trim()) {
+  if (!readState().nombre) {
     document.getElementById('nombreEmpleado').value = 'Juan Carlos Flores Ríos';
   }
 
@@ -1061,7 +1065,7 @@ function limpiarTodo() {
 function replicarHorario(diaFuente) {
   const activo    = document.getElementById('chkReplica').checked;
   if (!activo) return;
-  const diaInicio = Math.max(1, parseInt(document.getElementById('diaInicio')?.value) || 1);
+  const { diaInicio } = readState();
 
   const filas = Array.from(document.querySelectorAll('#tbodyDias tr[data-dia]'));
 
@@ -1319,11 +1323,7 @@ function guardarAvancesEnStorage(lista) {
 
 /* Guarda el estado actual */
 function guardarAvance() {
-  const nombre  = document.getElementById('nombreEmpleado').value.trim();
-  const mes     = parseInt(document.getElementById('mes').value);
-  const anio    = parseInt(document.getElementById('anio').value);
-  const seguro  = document.getElementById('seguro').value;
-  const diaActivacion = parseInt(document.getElementById('diaActivacion')?.value) || 1;
+  const { nombre, mes, anio, seguro, diaActivacion } = readState();
   const filas   = document.querySelectorAll('#tbodyDias tr[data-dia]');
 
   if (!filas.length) {
@@ -1494,12 +1494,7 @@ function borrarAvance(id) {
    EXPORTAR / IMPORTAR AVANCE (JSON)
    ============================================================ */
 function exportarAvance() {
-  const nombre        = document.getElementById('nombreEmpleado').value.trim();
-  const mes           = parseInt(document.getElementById('mes').value);
-  const anio          = parseInt(document.getElementById('anio').value);
-  const seguro        = document.getElementById('seguro').value;
-  const diaActivacion = parseInt(document.getElementById('diaActivacion')?.value) || 1;
-  const diaInicio     = parseInt(document.getElementById('diaInicio')?.value) || 1;
+  const { nombre, mes, anio, seguro, diaActivacion, diaInicio } = readState();
   const filas         = document.querySelectorAll('#tbodyDias tr[data-dia]');
 
   if (!filas.length) {
