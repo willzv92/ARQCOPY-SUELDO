@@ -6,10 +6,12 @@ const { cargarApp } = require('./helpers/app');
 const { app } = cargarApp();
 
 test('constantes legales peruanas', () => {
-  assert.equal(app.SUELDO_BASE, 1130);
+  assert.equal(app.SUELDO_BASE, 1230);
+  assert.equal(app.SUELDO_BASE_TXT, 'S/ 1,230');
   assert.equal(app.DIAS_MES_BASE, 30);
   assert.equal(app.HORAS_DIARIAS, 8);
-  assert.equal(app.VALOR_HORA, 1130 / 30 / 8);
+  assert.equal(app.VALOR_HORA, 1230 / 30 / 8);
+  assert.equal(app.VALOR_HORA, 5.125);
   assert.equal(app.TASA_EXTRA_25, 0.25);
   assert.equal(app.TASA_EXTRA_35, 0.35);
   assert.equal(app.TASA_AFP, 0.1137);

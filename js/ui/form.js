@@ -44,12 +44,12 @@ function actualizarInfoSeguro() {
     baseCalculo = SUELDO_BASE;
     descCalc    = SUELDO_BASE * tasa;
     banner.style.display = 'flex';
-    texto.textContent = `${label}: descuento sobre sueldo base completo S/ 1,130 → descuento = ${fmtSol(descCalc)}.`;
+    texto.textContent = `${label}: descuento sobre sueldo base completo ${SUELDO_BASE_TXT} → descuento = ${fmtSol(descCalc)}.`;
   } else {
     baseCalculo = SUELDO_BASE * ((DIAS_MES_BASE - (dia - 1)) / DIAS_MES_BASE);
     descCalc    = baseCalculo * tasa;
     banner.style.display = 'flex';
-    texto.textContent = `${label}: activación día ${dia} → base proporcional = S/ 1,130 × (${DIAS_MES_BASE - (dia - 1)}/${DIAS_MES_BASE}) = ${fmtSol(baseCalculo)} → descuento = ${fmtSol(descCalc)}.`;
+    texto.textContent = `${label}: activación día ${dia} → base proporcional = ${SUELDO_BASE_TXT} × (${DIAS_MES_BASE - (dia - 1)}/${DIAS_MES_BASE}) = ${fmtSol(baseCalculo)} → descuento = ${fmtSol(descCalc)}.`;
   }
 }
 

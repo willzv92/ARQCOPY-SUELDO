@@ -66,7 +66,7 @@ function acumularAsistencia() {
 
 /* ============================================================
    OBTENER TOTALES DE LA TABLA
-   Regla 1: Cumple 8h todos los días → sueldo base S/1,130 + extras.
+   Regla 1: Cumple 8h todos los días → sueldo base S/1,230 + extras.
    Regla 2: Días faltantes → primero cubrir con horas extras (tramo
             35% primero, luego 25%). Si se cubren → sueldo completo.
    Regla 3: Sin extras o insuficientes → sueldo proporcional a horas

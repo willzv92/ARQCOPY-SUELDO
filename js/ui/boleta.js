@@ -43,7 +43,7 @@ function renderBoleta({ mes, anio, nombre, hoy, s, resumen,
   const sueldoBaseMaximo     = SUELDO_BASE * (diasLaboralesPeriodo / DIAS_MES_BASE);
 
   const labelSueldoBase = diaInicioV > 1
-    ? `Sueldo Base Proporcional (S/ 1,130 × ${diasLaboralesPeriodo}/${DIAS_MES_BASE} días, desde día ${diaInicioV})`
+    ? `Sueldo Base Proporcional (${SUELDO_BASE_TXT} × ${diasLaboralesPeriodo}/${DIAS_MES_BASE} días, desde día ${diaInicioV})`
     : `Sueldo Base Mensual (mes completo)`;
 
   const rowSueldoBase = horasNoCubiertas > 0
@@ -98,13 +98,13 @@ function renderBoleta({ mes, anio, nombre, hoy, s, resumen,
       const diasEfectivos = DIAS_MES_BASE - (s.diaActivacion - 1);
       seccionSeguro = `
       <div class="boleta-row">
-        <span class="label">${s.labelSeguro} — base: S/ 1,130 × (${diasEfectivos}/${DIAS_MES_BASE} días desde día ${s.diaActivacion}) = ${fmtSol(s.baseSeguro)}</span>
+        <span class="label">${s.labelSeguro} — base: ${SUELDO_BASE_TXT} × (${diasEfectivos}/${DIAS_MES_BASE} días desde día ${s.diaActivacion}) = ${fmtSol(s.baseSeguro)}</span>
         <span class="value desc">- ${fmtSol(s.descuentoSeguro)}</span>
       </div>`;
     } else {
       seccionSeguro = `
       <div class="boleta-row">
-        <span class="label">${s.labelSeguro} sobre S/ 1,130 (inscrito desde día 1)</span>
+        <span class="label">${s.labelSeguro} sobre ${SUELDO_BASE_TXT} (inscrito desde día 1)</span>
         <span class="value desc">- ${fmtSol(s.descuentoSeguro)}</span>
       </div>`;
     }

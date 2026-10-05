@@ -100,7 +100,7 @@ const ELEMENTOS_BASE = [
 
 const EPILOGO = `
 globalThis.__app = {
-  SUELDO_BASE, DIAS_MES_BASE, HORAS_DIARIAS, VALOR_HORA,
+  SUELDO_BASE, SUELDO_BASE_TXT, DIAS_MES_BASE, HORAS_DIARIAS, VALOR_HORA,
   TASA_EXTRA_25, TASA_EXTRA_35, TASA_AFP, TASA_ONP, MESES, DIAS_SEMANA,
   getDiasEnMes, getDiasHabiles, esFinDeSemana,
   fmtSol, fmtHrs, fmtResumenHoras,

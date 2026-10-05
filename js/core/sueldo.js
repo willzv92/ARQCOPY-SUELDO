@@ -2,16 +2,16 @@
 
 /* ============================================================
    CÁLCULO DE SUELDO
-   Regla 1: horasNoCubiertas = 0 → sueldo = S/1,130 + extras.
+   Regla 1: horasNoCubiertas = 0 → sueldo = S/1,230 + extras.
    Regla 2: horasNoCubiertas = 0 (cubiertas por extras) → ídem.
    Regla 3: horasNoCubiertas > 0 → sueldo proporcional a horas
-            reales: (horasEfectivas / horasRegla) × 1,130 + extras.
-   Seguro AFP/ONP: SIEMPRE sobre S/1,130 fijo.
+            reales: (horasEfectivas / horasRegla) × 1,230 + extras.
+   Seguro AFP/ONP: SIEMPRE sobre S/1,230 fijo.
    ============================================================ */
 function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas) {
   const st             = readState();
   const tipoSeguro     = st.seguro;
-  const valorHora      = VALOR_HORA; // S/ 1,130 / 30 / 8
+  const valorHora      = VALOR_HORA; // S/ 1,230 / 30 / 8
   const diaInicioV     = st.diaInicio;
 
   // Sueldo base máximo para el período (proporcional si empezó después del día 1)
@@ -34,7 +34,7 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
 
   const bruto = sueldoProporcional + pagoExtras;
 
-  // ── Seguro: base siempre S/ 1,130, pero proporcional si activación ≠ día 1
+  // ── Seguro: base siempre S/ 1,230, pero proporcional si activación ≠ día 1
   let descuentoSeguro = 0;
   let labelSeguro     = 'No Inscrito';
   let tasaSeguro      = 0;
@@ -47,7 +47,7 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
     diaActivacion = st.diaActivacion;
 
     if (diaActivacion > 1) {
-      // Proporcional: S/ 1,130 × (30 − (día − 1)) / 30
+      // Proporcional: S/ 1,230 × (30 − (día − 1)) / 30
       const diasEfectivos = DIAS_MES_BASE - (diaActivacion - 1);
       baseSeguro    = SUELDO_BASE * (diasEfectivos / DIAS_MES_BASE);
       esProporcionado = true;

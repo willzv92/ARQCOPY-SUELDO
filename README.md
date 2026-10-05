@@ -1,7 +1,7 @@
 # Arq-Copy — Planilla de Sueldos
 
 Aplicación **estática** (sin build, sin servidor) para calcular planillas de
-sueldo en Perú según la normativa vigente: sueldo mínimo **S/ 1,130**,
+sueldo en Perú según la normativa vigente: sueldo mínimo **S/ 1,230**,
 jornada de **8 h diarias / 30 días al mes**, horas extras al **25 %** (primeras
 2 h) y al **35 %** (a partir de la 3.ª), y descuentos de **AFP (11,37 %)** u
 **ONP (13 %)** sobre el sueldo base.
@@ -58,7 +58,7 @@ Tampoco hay atributos `on*` en línea: todos los eventos se delegan en
 
 | | Condición | Resultado |
 |---|---|---|
-| **Regla 1** | Jornada completa, sin faltas | Sueldo base S/ 1,130 + horas extras |
+| **Regla 1** | Jornada completa, sin faltas | Sueldo base S/ 1,230 + horas extras |
 | **Regla 2** | Faltas cubiertas por horas extras | Sueldo completo; las extras usadas **no** se pagan |
 | **Regla 3** | Faltas sin cobertura | Sueldo proporcional: `(horas efectivas / horas reglamentarias) × base` |
 
