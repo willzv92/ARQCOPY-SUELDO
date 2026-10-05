@@ -246,8 +246,9 @@ function generarDias() {
     calcularFila(d);
   }
 
-  actualizarTotalesTabla();
-  actualizarStats();
+  const acum = acumularAsistencia();
+  actualizarTotalesTabla(acum);
+  actualizarStats(acum);
   document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -300,36 +301,28 @@ function calcularFila(dia) {
 
 /* ============================================================
    TOTALES AL PIE DE LA TABLA
+   Proyección del mismo barrido: horas brutas del mes y extras
+   brutas (sin compensar déficit).
    ============================================================ */
-function actualizarTotalesTabla() {
+function actualizarTotalesTabla(acum) {
   const celTot   = document.getElementById('totalHorasTrab');
   const celExtra = document.getElementById('totalHorasExtra');
   const bar      = document.getElementById('totalesBar');
   if (!celTot || !celExtra || !bar) return;
 
+  const { detalle } = acum || acumularAsistencia();
+
   let sumTrab  = 0;
   let sumExtra = 0;
   let hayDatos = false;
 
-  document.querySelectorAll('#tbodyDias tr[data-dia]').forEach(fila => {
-    const d = fila.dataset.dia;
-    const entrada  = document.getElementById('entrada_'  + d)?.value;
-    const salida   = document.getElementById('salida_'   + d)?.value;
-    const almuerzo = parseInt(document.getElementById('almuerzo_' + d)?.value) || 0;
-
-    if (!entrada || !salida || entrada >= salida) return;
+  detalle.forEach(({ estado, horas }) => {
+    if (estado === 'falta') return;
     hayDatos = true;
-
-    if (esDescanso(entrada, salida, almuerzo)) {
-      sumTrab += HORAS_DIARIAS;
-      return;
+    sumTrab += horas;
+    if (estado === 'ok' && horas > HORAS_DIARIAS) {
+      sumExtra += horas - HORAS_DIARIAS;
     }
-
-    const [eh, em] = entrada.split(':').map(Number);
-    const [sh, sm] = salida.split(':').map(Number);
-    const horas = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
-    sumTrab  += horas;
-    sumExtra += Math.max(0, horas - HORAS_DIARIAS);
   });
 
   if (!hayDatos) { bar.style.display = 'none'; return; }
@@ -340,28 +333,25 @@ function actualizarTotalesTabla() {
 }
 
 /* ============================================================
-   OBTENER TOTALES DE LA TABLA
-   Regla 1: Cumple 8h todos los días → sueldo base S/1,130 + extras.
-   Regla 2: Días faltantes → primero cubrir con horas extras (tramo
-            35% primero, luego 25%). Si se cubren → sueldo completo.
-   Regla 3: Sin extras o insuficientes → sueldo proporcional a horas
-            reales / (díasMes × 8h).
+   ÚNICO BARRIDO DE LA TABLA DE ASISTENCIA
+   Recorre las filas UNA sola vez y clasifica cada día en uno de
+   tres estados:
+     'falta'    → sin registro válido (8h de déficit)
+     'descanso' → 00:00–08:00 sin almuerzo (8h exactas, sin extras)
+     'ok'       → horas reales registradas
+   Todas las proyecciones (totales de la tabla, resumen del
+   empleado, stats y boleta) se derivan de aquí, de modo que no
+   pueden divergir entre sí.
    ============================================================ */
-function obtenerTotalesAsistencia() {
+function acumularAsistencia() {
   const { mes, anio, diaInicio } = readState();
   const diasRealesMes = getDiasEnMes(mes, anio);
-  const diasLaborales = diasRealesMes - (diaInicio - 1);           // días que el empleado debía trabajar
-  const horasRegla    = diasLaborales * HORAS_DIARIAS;             // horas "perfectas" del período
+  const diasLaborales = diasRealesMes - (diaInicio - 1); // días que el empleado debía trabajar
+  const horasRegla    = diasLaborales * HORAS_DIARIAS;   // horas "perfectas" del período
 
-  const filas = document.querySelectorAll('#tbodyDias tr[data-dia]');
+  const detalle = [];
 
-  let horasTrabajadas  = 0;  // horas brutas reales (incluyendo extras)
-  let horasBase        = 0;  // horas base por día, cap 8h/día (para sueldo proporcional)
-  let extrasPool_25    = 0;  // h.e. al 25% disponibles antes de compensar
-  let extrasPool_35    = 0;  // h.e. al 35% disponibles antes de compensar
-  let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
-
-  filas.forEach(fila => {
+  document.querySelectorAll('#tbodyDias tr[data-dia]').forEach(fila => {
     const d = parseInt(fila.dataset.dia);
     if (!d) return;
 
@@ -371,23 +361,58 @@ function obtenerTotalesAsistencia() {
     const entrada  = document.getElementById(`entrada_${d}`)?.value;
     const salida   = document.getElementById(`salida_${d}`)?.value;
     const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
+    const nombre   = DIAS_SEMANA[new Date(anio, mes, d).getDay()];
 
     // Día sin registro válido → falta completa → 8h de déficit
     if (!entrada || !salida || entrada >= salida) {
-      deficitBruto += HORAS_DIARIAS;
+      detalle.push({ dia: d, nombre, estado: 'falta', horas: 0 });
       return;
     }
 
     // Día de descanso (00:00–08:00, 0 almuerzo) → 8h exactas
     if (esDescanso(entrada, salida, almuerzo)) {
-      horasTrabajadas += HORAS_DIARIAS;
-      horasBase       += HORAS_DIARIAS;
+      detalle.push({ dia: d, nombre, estado: 'descanso', horas: HORAS_DIARIAS });
       return;
     }
 
     const [eh, em] = entrada.split(':').map(Number);
     const [sh, sm] = salida.split(':').map(Number);
     const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
+
+    detalle.push({ dia: d, nombre, estado: 'ok', horas });
+  });
+
+  return { diasRealesMes, diasLaborales, horasRegla, detalle };
+}
+
+/* ============================================================
+   OBTENER TOTALES DE LA TABLA
+   Regla 1: Cumple 8h todos los días → sueldo base S/1,130 + extras.
+   Regla 2: Días faltantes → primero cubrir con horas extras (tramo
+            35% primero, luego 25%). Si se cubren → sueldo completo.
+   Regla 3: Sin extras o insuficientes → sueldo proporcional a horas
+            reales / (díasMes × 8h).
+   ============================================================ */
+function obtenerTotalesAsistencia(acum) {
+  const { diasRealesMes, horasRegla, detalle } = acum || acumularAsistencia();
+
+  let horasTrabajadas  = 0;  // horas brutas reales (incluyendo extras)
+  let horasBase        = 0;  // horas base por día, cap 8h/día (para sueldo proporcional)
+  let extrasPool_25    = 0;  // h.e. al 25% disponibles antes de compensar
+  let extrasPool_35    = 0;  // h.e. al 35% disponibles antes de compensar
+  let deficitBruto     = 0;  // horas que faltan para cubrir la jornada
+
+  detalle.forEach(({ estado, horas }) => {
+    if (estado === 'falta') {
+      deficitBruto += HORAS_DIARIAS;
+      return;
+    }
+
+    if (estado === 'descanso') {
+      horasTrabajadas += HORAS_DIARIAS;
+      horasBase       += HORAS_DIARIAS;
+      return;
+    }
 
     horasTrabajadas += horas;
     // horasBase cuenta cada día como máximo 8h: las extras NO se suman aquí
@@ -540,13 +565,14 @@ function calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_
 /* ============================================================
    STATS (resumen en tiempo real)
    ============================================================ */
-function actualizarStats() {
+function actualizarStats(acum) {
   const statsGrid = document.getElementById('statsGrid');
   if (!statsGrid) return;
 
-  actualizarTotalesTabla();
+  const a = acum || acumularAsistencia();
+  actualizarTotalesTabla(a);
 
-  const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia();
+  const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia(a);
   const s = calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas);
 
   statsGrid.innerHTML = `
@@ -660,44 +686,27 @@ function fmtResumenHoras(hDecimal) {
 
 /* ============================================================
    OBTENER RESUMEN DEL EMPLEADO (Días trabajados, faltados, horas)
-   Usa EXACTAMENTE la misma lógica que obtenerTotalesAsistencia
-   para garantizar que los números sean consistentes.
+   Proyección derivada del MISMO barrido que obtenerTotalesAsistencia:
+   recorre acum.detalle en lugar de volver a interpretar el DOM.
    ============================================================ */
-function obtenerResumenEmpleado() {
-  const { diaInicio, mes, anio } = readState();
-  const filas     = document.querySelectorAll('#tbodyDias tr[data-dia]');
+function obtenerResumenEmpleado(acum) {
+  const { detalle } = acum || acumularAsistencia();
 
-  // Acumuladores — misma lógica que obtenerTotalesAsistencia
+  // Acumuladores — mismas reglas que obtenerTotalesAsistencia
   let extrasPool_25  = 0;   // h.e. brutas al 25% (antes de compensación)
   let extrasPool_35  = 0;   // h.e. brutas al 35% (antes de compensación)
   let horasDebe      = 0;   // déficit de días con registro parcial (< 8h)
-  let diasDebeList   = [];  // días sin ningún registro válido
+  const diasDebeList = [];  // días sin ningún registro válido
 
-  filas.forEach(fila => {
-    const d = parseInt(fila.dataset.dia);
-    if (!d) return;
-
-    // Días previos al inicio laboral → se ignoran (igual que obtenerTotalesAsistencia)
-    if (d < diaInicio) return;
-
-    const entrada  = document.getElementById(`entrada_${d}`)?.value;
-    const salida   = document.getElementById(`salida_${d}`)?.value;
-    const almuerzo = parseInt(document.getElementById(`almuerzo_${d}`)?.value) || 0;
-
-    // Sin registro válido → falta total (igual que obtenerTotalesAsistencia: +8h déficit)
-    if (!entrada || !salida || entrada >= salida) {
-      const fecha   = new Date(anio, mes, d);
-      const nombreD = DIAS_SEMANA[fecha.getDay()];
-      diasDebeList.push({ dia: d, nombre: nombreD, horas: HORAS_DIARIAS });
+  detalle.forEach(({ dia, nombre, estado, horas }) => {
+    // Sin registro válido → falta total (+8h de déficit)
+    if (estado === 'falta') {
+      diasDebeList.push({ dia, nombre, horas: HORAS_DIARIAS });
       return;
     }
 
     // Día de descanso → 8h exactas, sin extras ni déficit
-    if (esDescanso(entrada, salida, almuerzo)) return;
-
-    const [eh, em] = entrada.split(':').map(Number);
-    const [sh, sm] = salida.split(':').map(Number);
-    const horas    = Math.max(0, ((sh * 60 + sm) - (eh * 60 + em) - almuerzo) / 60);
+    if (estado === 'descanso') return;
 
     if (horas > HORAS_DIARIAS) {
       // Extras brutas del día: primeras 2h → 25%, resto → 35%
@@ -730,7 +739,9 @@ function calcularYMostrar() {
   const { nombre: nombreRaw, mes, anio, diaInicio: diaInicioV } = readState();
   const nombre = nombreRaw || 'Empleado Sin Nombre';
 
-  const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia();
+  // Un solo barrido de la tabla, compartido por totales y resumen
+  const acum = acumularAsistencia();
+  const { diasRealesMes, horasRegla, horasTrabajadas, horasEfectivas, totalExtras, totalExtras_25, totalExtras_35, deficitBruto, horasNoCubiertas } = obtenerTotalesAsistencia(acum);
   const s = calcularSueldo(horasEfectivas, horasRegla, totalExtras_25, totalExtras_35, horasNoCubiertas);
 
   const hoy = new Date().toLocaleDateString('es-PE', {
@@ -822,8 +833,8 @@ function calcularYMostrar() {
 
   const hayDescuentos = s.descuentoSeguro > 0 || s.totalDescAdicional > 0;
   
-  // Obtener resumen del empleado
-  const resumen = obtenerResumenEmpleado();
+  // Obtener resumen del empleado (mismo barrido que los totales)
+  const resumen = obtenerResumenEmpleado(acum);
 
   // ── Ítem: Días Debe (lista detallada de días con falta total)
   const diasDebeDetalle = resumen.diasDebeList.length > 0
