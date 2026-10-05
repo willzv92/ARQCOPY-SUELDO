@@ -6,7 +6,10 @@
   "scripts": {
     "golden:capture": "node tests/harness/golden.js --capture",
     "golden:verify": "node tests/harness/golden.js --verify",
-    "test": "node tests/harness/golden.js --verify"
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
+    "test:golden": "node tests/harness/golden.js --verify",
+    "test:ui": "node tests/harness/delegacion.js",
+    "test": "npm run test:unit && npm run test:golden && npm run test:ui"
   },
   "devDependencies": {
     "jsdom": "^24.1.3"
