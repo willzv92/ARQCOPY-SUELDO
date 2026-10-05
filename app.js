@@ -748,6 +748,27 @@ function calcularYMostrar() {
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
+  const resumen = obtenerResumenEmpleado(acum);
+
+  const html = renderBoleta({
+    mes, anio, nombre, hoy, s, resumen,
+    diasRealesMes, horasRegla, diaInicioV,
+    horasEfectivas, horasNoCubiertas, deficitBruto,
+  });
+
+  document.getElementById('boletaContainer').innerHTML = html;
+
+  document.getElementById('boletaContainer').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ============================================================
+   RENDER DE LA BOLETA DE PAGO
+   Presentación pura: recibe los datos ya calculados y devuelve
+   el HTML. No lee el DOM ni ejecuta cálculos de negocio.
+   ============================================================ */
+function renderBoleta({ mes, anio, nombre, hoy, s, resumen,
+                        diasRealesMes, horasRegla, diaInicioV,
+                        horasEfectivas, horasNoCubiertas, deficitBruto }) {
   // ── Regla 3: sueldo proporcional a horas (horasNoCubiertas > 0)
   // Muestra el desglose: horas efectivas / horas reglamentarias
   const diasLaboralesPeriodo = DIAS_MES_BASE - (diaInicioV - 1);
@@ -833,8 +854,6 @@ function calcularYMostrar() {
 
   const hayDescuentos = s.descuentoSeguro > 0 || s.totalDescAdicional > 0;
   
-  // Obtener resumen del empleado (mismo barrido que los totales)
-  const resumen = obtenerResumenEmpleado(acum);
 
   // ── Ítem: Días Debe (lista detallada de días con falta total)
   const diasDebeDetalle = resumen.diasDebeList.length > 0
@@ -903,7 +922,8 @@ function calcularYMostrar() {
     </div>
   `;
 
-  document.getElementById('boletaContainer').innerHTML = `
+
+  return `
     <div class="boleta">
 
       <div class="boleta-header">
@@ -975,8 +995,6 @@ function calcularYMostrar() {
       </div>
     </div>
   `;
-
-  document.getElementById('boletaContainer').scrollIntoView({ behavior: 'smooth' });
 }
 
 /* ============================================================
