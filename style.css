@@ -1093,7 +1093,7 @@ input[type="time"]:focus,
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* Print handled via iframe in app.js — no page-level print styles needed */
+/* Print handled via iframe in js/ui/boleta.js — no page-level print styles needed */
 
 /* ============================================================
    EXPORT / IMPORT TOOLBAR

@@ -36,9 +36,13 @@ function normalizeText(s) {
    CONSTRUCCIÓN DE LA APP EN jsdom
    ------------------------------------------------------------ */
 function createApp() {
-  let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  html = html
-    .replace(/<script src="app\.js[^"]*"><\/script>/g, '')
+  const raw = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  // Orden de carga derivado del propio index.html (scripts clásicos).
+  const scriptSrcs = [...raw.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)]
+    .map(m => m[1]);
+
+  const html = raw
+    .replace(/<script src="js\/[^"]+"><\/script>/g, '')
     .replace(/<link[^>]+fonts\.[^>]+>/g, '');
 
   const vc = new VirtualConsole();
@@ -59,12 +63,18 @@ function createApp() {
   w.alert = () => {};
   w.confirm = () => true;
 
-  const script = w.document.createElement('script');
-  script.textContent = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
-  w.document.body.appendChild(script);
+  for (const src of scriptSrcs) {
+    const file = path.join(ROOT, src.split('?')[0]);
+    const script = w.document.createElement('script');
+    script.textContent = fs.readFileSync(file, 'utf8');
+    w.document.body.appendChild(script);
+  }
 
   if (typeof w.generarDias !== 'function') {
-    throw new Error('No se pudieron exponer las funciones de app.js en el DOM');
+    throw new Error('No se pudieron exponer las funciones de js/*.js en el DOM');
+  }
+  if (typeof w.calcularYMostrar !== 'function') {
+    throw new Error('js/main.js no se cargó (ACCIONES/arranque ausente)');
   }
   return dom;
 }
