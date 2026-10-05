@@ -379,9 +379,18 @@ function ejecutar(def) {
   let printStyle = '';
   let printBody = '';
   if (iframe && iframe.contentDocument) {
-    const st = iframe.contentDocument.querySelector('style');
-    printStyle = st ? st.textContent : '';
-    printBody = iframe.contentDocument.body ? iframe.contentDocument.body.innerHTML : '';
+    const doc = iframe.contentDocument;
+    // Desde la fase 4 el CSS de impresión vive en css/print.css y el iframe
+    // lo referencia con <link>. jsdom no descarga recursos externos, así que
+    // se lee el archivo desde disco para seguir pudiéndolo comparar.
+    const link = doc.querySelector('link[href$="print.css"]');
+    if (link) {
+      printStyle = fs.readFileSync(path.join(ROOT, link.getAttribute('href')), 'utf8');
+    } else {
+      const st = doc.querySelector('style');
+      printStyle = st ? st.textContent : '';
+    }
+    printBody = doc.body ? doc.body.innerHTML : '';
   }
 
   const resultado = {

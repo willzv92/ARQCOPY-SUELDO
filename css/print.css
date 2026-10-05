@@ -1,0 +1,139 @@
+
+    @page { size: A4 portrait; margin: 12mm 14mm; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; background: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10pt; color: #1e2d4a;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .boleta {
+      width: 100%; border: 1.5px solid #1e2d4a;
+      border-radius: 10px; padding: 10mm 11mm; background: #fff;
+    }
+    .boleta-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding-bottom: 10px; margin-bottom: 12px; border-bottom: 2px solid #d0dce8;
+    }
+    .boleta-brand { font-size: 18pt; font-weight: 700; color: #1e2d4a; letter-spacing: -0.03em; }
+    .boleta-brand span { color: #f47c51; }
+    .boleta-tipo { font-family: 'Space Mono', monospace; font-size: 6.5pt; letter-spacing: 0.14em; color: #6b82a0; text-transform: uppercase; margin-top: 3px; }
+    .boleta-periodo-text { font-family: 'Space Mono', monospace; font-size: 7.5pt; color: #6b82a0; text-align: right; line-height: 1.8; }
+    .boleta-empleado { background: #f0f4f8; border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; }
+    .boleta-empleado h3 { font-size: 12pt; font-weight: 700; color: #1e2d4a; margin-bottom: 4px; }
+    .boleta-empleado p { font-size: 7.5pt; color: #6b82a0; line-height: 1.7; }
+    .boleta-section-title { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; padding-bottom: 4px; }
+    .boleta-section-title.ingreso   { color: #3a8bbf; border-bottom: 1px solid #d0eaf7; }
+    .boleta-section-title.descuento { color: #e74c3c; border-bottom: 1px solid #facccc; }
+    .boleta-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px dashed #e8eef5; }
+    .boleta-row:last-child { border-bottom: none; }
+    .boleta-row .label { color: #6b82a0; font-size: 9pt; }
+    .boleta-row .value { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 9pt; color: #1e2d4a; white-space: nowrap; }
+    .boleta-row .value.extra { color: #f47c51; }
+    .boleta-row .value.desc  { color: #e74c3c; }
+    .boleta-subtotal { display: flex; justify-content: space-between; padding: 8px 0 2px; font-weight: 700; font-size: 9.5pt; border-top: 1.5px solid #d0dce8; margin-top: 4px; }
+    .boleta-subtotal .value { font-family: 'Space Mono', monospace; font-size: 9.5pt; }
+    .boleta-divider { border: none; border-top: 2px solid #d0dce8; margin: 12px 0; }
+    div[style*="margin-bottom:20px"], div[style*="margin-bottom: 20px"] { margin-bottom: 12px !important; }
+    .boleta-total { background: #1e2d4a !important; border-radius: 8px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+    .boleta-total .label { color: #5ab4e0 !important; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+    .boleta-total .value { font-family: 'Space Mono', monospace; font-size: 15pt; font-weight: 700; color: #fff !important; }
+    .boleta-actions { display: none !important; }
+
+    /* ── RESUMEN ── */
+    .boleta-resumen {
+      margin-top: 16px !important;
+      padding-top: 14px !important;
+      border-top: 1.5px solid #d0dce8 !important;
+      display: block !important;
+    }
+    .boleta-resumen .boleta-section-title {
+      display: block !important;
+      color: #1e2d4a !important;
+      border-bottom: 1px solid #d0dce8 !important;
+      margin-bottom: 10px !important;
+      padding-bottom: 4px !important;
+      font-size: 6.5pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.12em !important;
+    }
+    .resumen-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 7px !important;
+      width: 100% !important;
+    }
+    .resumen-item {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 3px !important;
+      padding: 8px 10px !important;
+      border-radius: 5px !important;
+      border: 1px solid #d0dce8 !important;
+      background: #f0f4f8 !important;
+      text-align: left !important;
+      break-inside: avoid !important;
+    }
+    .resumen-item--extra25,
+    .resumen-item--extra35 {
+      border-color: #e74c3c !important;
+      background: #fff0f0 !important;
+    }
+    .resumen-item--extra25 .resumen-label,
+    .resumen-item--extra35 .resumen-label {
+      color: #e74c3c !important;
+    }
+    .resumen-item--debe,
+    .resumen-item--diasdebe {
+      border-color: #e74c3c !important;
+      background: #fff0f0 !important;
+    }
+    .resumen-item--adescontar {
+      grid-column: 1 / -1 !important;
+      border-color: #27ae60 !important;
+      background: #eafaf1 !important;
+    }
+    .resumen-item--adescontar .resumen-label {
+      color: #27ae60 !important;
+    }
+    .resumen-label {
+      display: block !important;
+      font-size: 5.5pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+      color: #6b82a0 !important;
+      margin-bottom: 1px !important;
+    }
+    .resumen-value {
+      display: block !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 8.5pt !important;
+      font-weight: 700 !important;
+      color: #1e2d4a !important;
+      line-height: 1.4 !important;
+    }
+    .resumen-val--orange { color: #f47c51 !important; }
+    .resumen-val--danger { color: #e74c3c !important; }
+    .resumen-val--small  { font-size: 7pt !important; line-height: 1.7 !important; }
+    .resumen-note {
+      display: block !important;
+      font-size: 5.5pt !important;
+      color: #6b82a0 !important;
+      font-style: italic !important;
+      margin-top: 1px !important;
+    }
+    .resumen-note--total {
+      display: block !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 6pt !important;
+      font-style: normal !important;
+      font-weight: 700 !important;
+      color: #e74c3c !important;
+      margin-top: 4px !important;
+      padding-top: 3px !important;
+      border-top: 1px dashed #e74c3c !important;
+    }
+  
