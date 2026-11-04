@@ -302,56 +302,78 @@ function importarAvance(event) {
       return;
     }
 
-    document.getElementById('nombreEmpleado').value = avance.nombre !== '(Sin nombre)' ? avance.nombre : '';
-    document.getElementById('mes').value            = avance.mes;
-    document.getElementById('anio').value           = avance.anio;
-    document.getElementById('seguro').value         = avance.seguro;
-    const diaActEl = document.getElementById('diaActivacion');
-    if (diaActEl) diaActEl.value = avance.diaActivacion != null ? avance.diaActivacion : 1;
-    const diaIniEl = document.getElementById('diaInicio');
-    if (diaIniEl) diaIniEl.value = avance.diaInicio != null ? avance.diaInicio : 1;
-    const sbEl = document.getElementById('sueldoBase');
-    if (sbEl) sbEl.value = avance.sueldoBase != null ? avance.sueldoBase : SUELDO_BASE;
-    actualizarInfoSeguro();
-    actualizarInfoSueldoBase();
+    if (!avance || typeof avance !== 'object') {
+      mostrarStatus('⚠ Archivo inválido: no contiene un avance válido', true);
+      return;
+    }
 
-    generarDias();
+    try {
+      // ── 1. Restaurar datos de cabecera del empleado
+      document.getElementById('nombreEmpleado').value = avance.nombre !== '(Sin nombre)' ? avance.nombre : '';
+      document.getElementById('mes').value            = avance.mes != null ? avance.mes : '';
+      document.getElementById('anio').value           = avance.anio != null ? avance.anio : '';
+      document.getElementById('seguro').value         = avance.seguro || 'ninguno';
 
-    requestAnimationFrame(function() {
-      (avance.dias || []).forEach(function(item) {
-        const entEl = document.getElementById('entrada_'  + item.dia);
-        const salEl = document.getElementById('salida_'   + item.dia);
-        const almEl = document.getElementById('almuerzo_' + item.dia);
-        if (!entEl) return;
-        entEl.value = item.entrada;
-        salEl.value = item.salida;
-        almEl.value = item.almuerzo;
-        calcularFila(item.dia);
+      const diaActEl = document.getElementById('diaActivacion');
+      if (diaActEl) diaActEl.value = avance.diaActivacion != null ? avance.diaActivacion : 1;
+
+      const diaIniEl = document.getElementById('diaInicio');
+      if (diaIniEl) diaIniEl.value = avance.diaInicio != null ? avance.diaInicio : 1;
+
+      const sbEl = document.getElementById('sueldoBase');
+      if (sbEl) sbEl.value = avance.sueldoBase != null ? avance.sueldoBase : SUELDO_BASE;
+
+      actualizarInfoSeguro();
+      actualizarInfoSueldoBase();
+
+      // ── 2. Regenerar tabla de días con los valores del periodo importado
+      generarDias();
+
+      // ── 3. Restaurar valores fila a fila (después de que el DOM esté listo)
+      requestAnimationFrame(function() {
+        try {
+          (avance.dias || []).forEach(function(item) {
+            const entEl = document.getElementById('entrada_'  + item.dia);
+            const salEl = document.getElementById('salida_'   + item.dia);
+            const almEl = document.getElementById('almuerzo_' + item.dia);
+            if (!entEl) return;
+            entEl.value = item.entrada != null ? item.entrada : '';
+            salEl.value = item.salida   != null ? item.salida   : '';
+            almEl.value = item.almuerzo != null ? item.almuerzo : '0';
+            calcularFila(item.dia);
+          });
+
+          // ── 4. Restaurar descuentos adicionales
+          document.getElementById('listaDescuentos').innerHTML = '';
+          descuentoIdCounter = 0;
+          (avance.descuentos || []).forEach(function(d) {
+            agregarDescuento();
+            const id  = descuentoIdCounter;
+            const cEl = document.getElementById('descConcepto_' + id);
+            const mEl = document.getElementById('descMonto_'    + id);
+            if (cEl) cEl.value = d.concepto != null ? d.concepto : '';
+            if (mEl) mEl.value = d.monto    != null ? d.monto    : '0';
+          });
+          actualizarTotalDescuentos();
+
+          // ── 5. Regenerar totales, stats y boleta con los datos importados
+          const acum   = acumularAsistencia();
+          const totales = obtenerTotalesAsistencia(acum);
+          actualizarTotalesTabla(acum);
+          actualizarStats(acum);
+          calcularYMostrar();
+
+          mostrarStatus('✓ Importado: ' + avance.nombre + ' — ' + MESES[avance.mes] + ' ' + avance.anio);
+          document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
+        } catch (err) {
+          console.error('Error al restaurar avance:', err);
+          mostrarStatus('⚠ Error al restaurar el avance', true);
+        }
       });
-
-      document.getElementById('listaDescuentos').innerHTML = '';
-      descuentoIdCounter = 0;
-      (avance.descuentos || []).forEach(function(d) {
-        agregarDescuento();
-        const id  = descuentoIdCounter;
-        const cEl = document.getElementById('descConcepto_' + id);
-        const mEl = document.getElementById('descMonto_'    + id);
-        if (cEl) cEl.value = d.concepto;
-        if (mEl) mEl.value = d.monto;
-      });
-      actualizarTotalDescuentos();
-
-      // ── 5. Regenerar totales, stats y boleta con los datos importados
-      //    Así el usuario ve el cálculo completo (no solo los datos de entrada).
-      const acum   = acumularAsistencia();
-      const totales = obtenerTotalesAsistencia(acum);
-      actualizarTotalesTabla(acum);
-      actualizarStats(acum);
-      calcularYMostrar();
-
-      mostrarStatus('✓ Importado: ' + avance.nombre + ' — ' + MESES[avance.mes] + ' ' + avance.anio);
-      document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
-    });
+    } catch (err) {
+      console.error('Error al importar avance:', err);
+      mostrarStatus('⚠ Error al importar el avance', true);
+    }
   };
   reader.readAsText(file);
   event.target.value = '';
