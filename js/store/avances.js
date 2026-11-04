@@ -340,6 +340,15 @@ function importarAvance(event) {
         if (mEl) mEl.value = d.monto;
       });
       actualizarTotalDescuentos();
+
+      // ── 5. Regenerar totales, stats y boleta con los datos importados
+      //    Así el usuario ve el cálculo completo (no solo los datos de entrada).
+      const acum   = acumularAsistencia();
+      const totales = obtenerTotalesAsistencia(acum);
+      actualizarTotalesTabla(acum);
+      actualizarStats(acum);
+      calcularYMostrar();
+
       mostrarStatus('✓ Importado: ' + avance.nombre + ' — ' + MESES[avance.mes] + ' ' + avance.anio);
       document.getElementById('stepAsistencia').scrollIntoView({ behavior: 'smooth' });
     });
