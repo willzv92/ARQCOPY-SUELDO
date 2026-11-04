@@ -205,6 +205,17 @@ function exportarAvance() {
     return;
   }
 
+  const total = getDiasEnMes(mes, anio);
+
+  // ── 1. Recalcular todas las filas antes de exportar
+  //    Así se asegura que todos los cambios realizados en la app (edición de
+  //    entradas/salidas/almuerzo, toggle "Replicar horario", etc.) queden
+  //    reflejados en el DOM antes de capturar el estado.
+  for (let d = diaInicio; d <= total; d++) {
+    calcularFila(d);
+  }
+
+  // ── 2. Capturar asistencia día a día
   const dias = [];
   filas.forEach(fila => {
     const d = parseInt(fila.dataset.dia);
@@ -212,11 +223,12 @@ function exportarAvance() {
     dias.push({
       dia:      d,
       entrada:  document.getElementById('entrada_' + d)?.value  || '',
-      salida:   document.getElementById('salida_'  + d)?.value  || '',
+      salida:   document.getElementById('salida_'  + d)?.value   || '',
       almuerzo: document.getElementById('almuerzo_' + d)?.value || '0',
     });
   });
 
+  // ── 3. Capturar descuentos adicionales
   const descuentos = [];
   document.querySelectorAll('.descuento-item').forEach(item => {
     const id = item.id.replace('descItem_', '');
@@ -226,10 +238,40 @@ function exportarAvance() {
     });
   });
 
+  // ── 4. Calcular totales y sueldo (resumen / boleta) para incluir en el snapshot
+  const acum   = acumularAsistencia();
+  const totales = obtenerTotalesAsistencia(acum);
+  const sueldo  = calcularSueldo(
+    totales.horasEfectivas,
+    totales.horasRegla,
+    totales.totalExtras_25,
+    totales.totalExtras_35,
+    totales.horasNoCubiertas
+  );
+
   const avance = {
     nombre: nombre || '(Sin nombre)',
     mes, anio, seguro, sueldoBase, diaActivacion, diaInicio,
     dias, descuentos,
+    // Snapshot del cálculo al momento de exportar (resumen y boleta de pago)
+    calculo: {
+      horasRegla:        totales.horasRegla,
+      horasTrabajadas:   totales.horasTrabajadas,
+      horasBase:         totales.horasBase,
+      horasEfectivas:    totales.horasEfectivas,
+      totalExtras:       totales.totalExtras,
+      totalExtras_25:    totales.totalExtras_25,
+      totalExtras_35:    totales.totalExtras_35,
+      deficitBruto:      totales.deficitBruto,
+      horasNoCubiertas:  totales.horasNoCubiertas,
+      sueldoProporcional: sueldo.sueldoProporcional,
+      pagoExtras:        sueldo.pagoExtras,
+      bruto:             sueldo.bruto,
+      descuentoSeguro:   sueldo.descuentoSeguro,
+      labelSeguro:       sueldo.labelSeguro,
+      totalDescAdicional: sueldo.totalDescAdicional,
+      neto:              sueldo.neto,
+    },
     exportadoEn: new Date().toLocaleString('es-PE'),
   };
 
