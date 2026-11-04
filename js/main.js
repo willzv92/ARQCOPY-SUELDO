@@ -31,7 +31,7 @@ const ACCIONES = {
   change: {
     'seguro-change':     () => actualizarInfoSeguro(),
     'replicar-toggle':   () => replicarHorario(null),
-    'importar':          (ev) => importarAvance(ev),
+    'importar':          (el, ev) => importarAvance(ev),
   },
 };
 
