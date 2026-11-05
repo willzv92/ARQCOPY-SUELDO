@@ -111,8 +111,8 @@ function calcularFila(dia) {
   if (!celTrab || !celExtra) return;
 
   if (!entrada || !salida || entrada >= salida) {
-    celTrab.innerHTML  = `<span class="hours-badge badge-absent">—</span>`;
-    celExtra.innerHTML = `<span class="hours-badge badge-absent">—</span>`;
+    celTrab.innerHTML  = `<span class="hours-badge badge-absent" title="Sin registro de entrada/salida">Sin registro</span>`;
+    celExtra.innerHTML = `<span class="hours-badge badge-absent" title="Sin registro de entrada/salida">—</span>`;
     actualizarStats();
     return;
   }
